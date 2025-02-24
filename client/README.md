@@ -14,3 +14,8 @@
 
 # Packer
 - Packs the loader to be hidden in a python program
+
+
+# TODOs?
+- Asymmetric Encryption
+- Rewrite in a compiled language or remove the need to install websockets
