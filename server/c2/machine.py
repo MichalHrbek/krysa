@@ -33,12 +33,12 @@ class Machine:
 		return uuid4().hex
 
 	def save(self):
-		with open(f'machines/{self.uid}.pkl', 'wb') as f:
+		with open(f'data/machines/{self.uid}.pkl', 'wb') as f:
 			pickle.dump(self, f)
 	
 	def load_all() -> list[Self]:
 		machines = []
-		for i in glob("machines/*.pkl"):
+		for i in glob("data/machines/*.pkl"):
 			with open(i, 'rb') as f:
 				m = pickle.load(f)
 				m.connected = False

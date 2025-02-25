@@ -1,24 +1,29 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter, Request, HTTPException, Path
-import json
-from machine import Machine
-import os
-from fastapi.middleware.cors import CORSMiddleware
+import json, os
 from typing import Annotated
 
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, WebSocketException, APIRouter, Request, HTTPException, Path, Depends, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
+
+from machine import Machine
+from auth import Authenticator
+
 # Loading
-os.makedirs("machines", exist_ok=True)
+os.makedirs("data/machines", exist_ok=True)
 machines = {i.uid: i for i in Machine.load_all()}
 
 
 # Fastapi setup
 app = FastAPI()
+dash_security = HTTPBasic()
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+	CORSMiddleware,
+	allow_origins=["*"],
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
 )
 
 dash_router = APIRouter()
@@ -63,6 +68,12 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 @dash_router.websocket("/ws")
 async def dashboard_websocket_endpoint(websocket: WebSocket):
 	await websocket.accept()
+	data = await websocket.receive_json()
+	
+	authed = Authenticator.verify_user(data["username"], data["password"])
+	if not authed:
+		raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
 	active_dashboards.append(websocket)
 	try:
 		while True:
@@ -75,8 +86,16 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 		active_dashboards.remove(websocket)
 
 @dash_router.get("/api/machines")
-def get_machines():
+def get_machines(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)]):
+	if not Authenticator.verify_user(credentials.username, credentials.password):
+		raise HTTPException(
+			status_code=status.HTTP_401_UNAUTHORIZED,
+			detail="Incorrect username or password",
+			headers={"WWW-Authenticate": "Basic"},
+		)
 	return machines
 
+# follow_symlink does the exact opposite of what it's supposed to and also crashes (0.45.3)???? https://github.com/encode/starlette/discussions/2850
+app.mount("/dashboard/ui", StaticFiles(directory="dashui", html=True, follow_symlink=False), name="Dashboard UI")
 app.include_router(dash_router, prefix="/dashboard")
 app.include_router(mach_router, prefix="/machines")

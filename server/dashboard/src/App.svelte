@@ -1,25 +1,55 @@
 <script>
   import Machine from './lib/Machine.svelte';
+
+  let server_url = localStorage.getItem("server_url");
+  let username = localStorage.getItem("username");
+  let password = localStorage.getItem("password");
+  if (!server_url || !username || !password) {
+    login();
+  }
+
+  function login() {
+    if (!server_url) {
+      server_url = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + "/dashboard/";
+    }
+    server_url = window.prompt("Server url:", server_url);
+    localStorage.setItem("server_url", server_url);
+
+    username = window.prompt("Username:", username)
+    localStorage.setItem("username", username);
+
+    password = window.prompt("Password:", password)
+    localStorage.setItem("password", password);
+  }
+
   let machines = $state({});
   let selected = $state({});
   let versions = $state({});
   let show_connected = $state(true);
   let show_disconnected = $state(true);
 
-  const URL = "127.0.0.1:8000/dashboard/"
-  const socket = new WebSocket("ws://" + URL + "ws");
-
-  socket.addEventListener("message", (event) => {
-    const e = JSON.parse(event.data);
-    machines[e.machine.uid] = e.machine;
-  });
+  let socket;
+  
   
   async function main()
   {
-    const response = await fetch("http://" + URL + "api/machines");
+    const encodedCredentials = btoa(`${username}:${password}`);
+    const response = await fetch("http://" + server_url + "api/machines", {
+      headers: {
+        "Authorization": `Basic ${encodedCredentials}`,
+      }
+    });
     machines = await response.json();
     versions = Object.fromEntries(Object.values(machines).map(v => [v.version, true]));
     selected = Object.fromEntries(Object.values(machines).map(v => [v.uid, false]));
+
+    if(socket && socket.readyState === WebSocket.OPEN) await socket.close();
+    socket = new WebSocket("ws://" + server_url + "ws");
+  
+    socket.addEventListener("message", (event) => {
+      const e = JSON.parse(event.data);
+      machines[e.machine.uid] = e.machine;
+    });
   }
 
   function is_shown(uid) {
@@ -52,6 +82,14 @@
       <br><br>
       <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = is_shown(uid) ? true : selected[uid])}>Select visible</button>
       <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = is_shown(uid) ? false : selected[uid])}>Deselect visible</button>
+    </div>
+
+    <div>
+      <h2>Server</h2>
+      <button onclick={() => {
+        login();
+        main();
+      }}>Login</button>
     </div>
   </header>
   
