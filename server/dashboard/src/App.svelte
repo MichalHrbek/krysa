@@ -48,9 +48,7 @@
 
   <div class="machines">
     {#each Object.values(machines) as { uid, version, connected, connections, orders } (uid)}
-    {#if versions[version] && ((connected && show_connected) || (!connected && show_disconnected))}
-    <Machine id={uid} version={version} connected={connected} connections={connections} orders={orders}/>
-    {/if}
+    <Machine id={uid} version={version} connected={connected} connections={connections} orders={orders} hidden={!(versions[version] && ((connected && show_connected) || (!connected && show_disconnected)))}/>
     {/each}
   </div>
 </main>

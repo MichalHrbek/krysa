@@ -1,17 +1,19 @@
 <script>
-  let { id, version, connected, connections, classs, orders, selected=false } = $props();
+  let { id, version, connected, connections, classs, orders, selected=false, hidden=false } = $props();
   let expanded = $state(false);
   
 </script>
 
-<div class="machine {connected ? 'connected' : 'disconnected'} {expanded ? 'expanded' : ''} {selected ? 'selected' : ''}">
-  <button aria-expanded={expanded} onclick={() => expanded = !expanded} aria-label='expand/shrink'>
-    <svg viewBox="0 0 20 20" fill="none" >
-      <path class="vert" d="M10 1V19" stroke="black" stroke-width="2"/>
-      <path d="M1 10L19 10" stroke="black" stroke-width="2"/>
-    </svg>
-  </button>
-  <input type="checkbox" name="selected" bind:checked={selected}>
+<div class="machine {connected ? 'connected' : 'disconnected'} {expanded ? 'expanded' : ''} {selected ? 'selected' : ''}" hidden={hidden}>
+  <div class="buttons">
+    <button aria-expanded={expanded} onclick={() => expanded = !expanded} aria-label='expand/shrink'>
+      <svg viewBox="0 0 20 20" fill="none" >
+        <path class="vert" d="M10 1V19" stroke="black" stroke-width="2"/>
+        <path d="M1 10L19 10" stroke="black" stroke-width="2"/>
+      </svg>
+    </button>
+    <input type="checkbox" name="selected" bind:checked={selected}>
+  </div>
   <p><b>Id:</b> {id}</p>
   <p><b>Version:</b> {version}</p>
   <p><b>Last connection:</b> {new Date(Math.max(...Object.values(connections).flat()) * 1000).toLocaleString()}</p>
@@ -79,7 +81,7 @@
 
   button {
     background-color: transparent;
-    color: var(--gray-darkest, #282828);
+    color: #282828;
     display: inline-flex;
     justify-content: space-between;
     margin: 0;
@@ -102,6 +104,19 @@
 
   .selected {
     order: 1;
-    border: 0.2em solid lightgreen;
+  }
+
+  input[type=checkbox] {
+    margin: 0;
+    width: 1.7em;
+    height: 1.7em;
+    border: 2px solid;
+  }
+
+  .buttons {
+    width: 100%;
+    align-items: center;
+    display: inline-flex;
+    justify-content: space-between;
   }
 </style>
