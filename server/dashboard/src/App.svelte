@@ -1,13 +1,10 @@
 <script>
-  import {
-    SvelteMap,
-    SvelteSet,
-  } from 'svelte/reactivity';
   import Machine from './lib/Machine.svelte';
-  var machines = $state({});
-  var versions = $state({});
-  var show_connected = $state(true);
-  var show_disconnected = $state(true);
+  let machines = $state({});
+  let selected = $state({});
+  let versions = $state({});
+  let show_connected = $state(true);
+  let show_disconnected = $state(true);
 
   const URL = "127.0.0.1:8000/dashboard/"
   const socket = new WebSocket("ws://" + URL + "ws");
@@ -22,33 +19,45 @@
     const response = await fetch("http://" + URL + "api/machines");
     machines = await response.json();
     versions = Object.fromEntries(Object.values(machines).map(v => [v.version, true]));
+    selected = Object.fromEntries(Object.values(machines).map(v => [v.uid, false]));
+  }
+
+  function is_shown(uid) {
+    return versions[machines[uid].version] && ((machines[uid].connected && show_connected) || (!machines[uid].connected && show_disconnected));
   }
 
   main();
 
-  $effect(() => {
-    
-  })
-
 </script>
 
 <main>
-  <div class="filters">
-    <h2>Filters</h2>
-    <label for="connected">Connected</label>
-    <input type="checkbox" name="connected" bind:checked={show_connected}><br>
-    <label for="disconnected">Disconnected</label>
-    <input type="checkbox" name="disconnected" bind:checked={show_disconnected}><br>
-    <label for="versions">Versions:</label>
-    {#each Object.keys(versions) as v}
+  <header>
+    <div>
+      <h2>Filters</h2>
+      <label for="connected">Connected</label>
+      <input type="checkbox" name="connected" bind:checked={show_connected}><br>
+      <label for="disconnected">Disconnected</label>
+      <input type="checkbox" name="disconnected" bind:checked={show_disconnected}><br>
+      <label for="versions">Versions:</label>
+      {#each Object.keys(versions) as v}
       <label for="v{v}">v{v}</label>
       <input type="checkbox" name="v{v}" bind:checked={versions[v]}>
-    {/each}
-  </div>
+      {/each}
+    </div>
 
+    <div>
+      <h2>Selection</h2>
+      <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = true)}>Select all</button>
+      <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = false)}>Deselect all</button>
+      <br><br>
+      <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = is_shown(uid) ? true : selected[uid])}>Select visible</button>
+      <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = is_shown(uid) ? false : selected[uid])}>Deselect visible</button>
+    </div>
+  </header>
+  
   <div class="machines">
     {#each Object.values(machines) as { uid, version, connected, connections, orders } (uid)}
-    <Machine id={uid} version={version} connected={connected} connections={connections} orders={orders} hidden={!(versions[version] && ((connected && show_connected) || (!connected && show_disconnected)))}/>
+    <Machine id={uid} version={version} connected={connected} connections={connections} orders={orders} bind:selected={selected[uid]} hidden={!is_shown(uid)}/>
     {/each}
   </div>
 </main>
@@ -58,11 +67,13 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
-    gap: 10px 10px;
+    gap: 0.5em;
   }
 
-  .filters {
+  header {
     width: 100%;
     padding-bottom: 2em;
+    display: flex;
+    gap: 2em;
   }
 </style>

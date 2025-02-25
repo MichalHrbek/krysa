@@ -1,5 +1,5 @@
 <script>
-  let { id, version, connected, connections, classs, orders, selected=false, hidden=false } = $props();
+  let { id, version, connected, connections, classs, orders, selected=$bindable(false), hidden=false } = $props();
   let expanded = $state(false);
   
 </script>
