@@ -101,6 +101,13 @@
         login();
         main();
       }}>Login</button>
+      <br><br>
+      <button onclick={() => {
+        password = "";
+        localStorage.setItem("password", "");
+        login();
+        main();
+      }}>Logout</button>
     </div>
   </header>
   
