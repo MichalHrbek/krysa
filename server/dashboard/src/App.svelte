@@ -10,7 +10,7 @@
 
   function login() {
     if (!server_url) {
-      server_url = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + "/dashboard/";
+      server_url = window.location.href.replace(/\/ui(?:\/.*)?$/, "/");
     }
     server_url = window.prompt("Server url:", server_url);
     localStorage.setItem("server_url", server_url);
@@ -34,18 +34,29 @@
   async function main()
   {
     const encodedCredentials = btoa(`${username}:${password}`);
-    const response = await fetch("http://" + server_url + "api/machines", {
+    const response = await fetch(server_url + "api/machines", {
       headers: {
         "Authorization": `Basic ${encodedCredentials}`,
       }
     });
+
     machines = await response.json();
+    if (!response.ok) {
+      if (response.status == 401) alert("Wrong login");
+      else alert("Problem with reaching the server at " + server_url);
+      return;
+    }
+
     versions = Object.fromEntries(Object.values(machines).map(v => [v.version, true]));
     selected = Object.fromEntries(Object.values(machines).map(v => [v.uid, false]));
 
     if(socket && socket.readyState === WebSocket.OPEN) await socket.close();
-    socket = new WebSocket("ws://" + server_url + "ws");
-  
+    socket = new WebSocket(server_url.replace(/^https/, "ws") + "ws");
+
+    socket.addEventListener("open", (event) => {
+      socket.send(JSON.stringify({username:username,password:password}));
+    });
+      
     socket.addEventListener("message", (event) => {
       const e = JSON.parse(event.data);
       machines[e.machine.uid] = e.machine;

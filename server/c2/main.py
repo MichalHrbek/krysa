@@ -45,7 +45,7 @@ async def broadcast_to_dashboards(data):
 @mach_router.get("/api/{version}/register")
 def register_machine(version: int, request: Request):
 	uid = Machine.gen_uid()
-	m = Machine(uid, version, request.client.host)
+	m = Machine(uid, version, host=request.client.host)
 	machines[uid] = m
 	print("Registered: ", uid)
 	return uid
