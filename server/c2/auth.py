@@ -49,13 +49,13 @@ class Authenticator:
 		return Hasher.verify_password(users[username], password)
 
 if __name__ == '__main__':
+	os.makedirs("data/", exist_ok=True)
 	username = input("Enter a username: ")
 	password = input("Enter a password: ")
 	password_attempt = input("Re-enter the password for verification: ")
 	
 	if password != password_attempt:
 		print("Entered different password")
-		exit()
 	
 	Authenticator.set_user(username, password)
 
