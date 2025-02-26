@@ -63,8 +63,20 @@
     });
   }
 
+  function sendOrder(order)
+  {
+    if (confirm(`Are you sure? (${num_selected()} machines selected)`))
+    {
+      socket.send(JSON.stringify({event:"order", uids: Object.keys(selected).filter(uid => selected[uid]), order: order}));
+    }
+  }
+
   function is_shown(uid) {
     return versions[machines[uid].version] && ((machines[uid].connected && show_connected) || (!machines[uid].connected && show_disconnected));
+  }
+
+  function num_selected() {
+    return Object.values(selected).filter(value => value).length;
   }
 
   main();
@@ -90,9 +102,17 @@
       <h2>Selection</h2>
       <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = true)}>Select all</button>
       <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = false)}>Deselect all</button>
-      <br><br>
+      <br>
       <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = is_shown(uid) ? true : selected[uid])}>Select visible</button>
       <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = is_shown(uid) ? false : selected[uid])}>Deselect visible</button>
+      <br>
+      <button onclick={() => {
+        if (confirm(`Are you sure? (${num_selected()} machines selected)`)) {
+          for (const [uid, sel] of Object.entries(selected)) {
+            // if (sel) 
+          }
+        }
+      }}>Cancel orders</button>
     </div>
 
     <div>
@@ -101,13 +121,20 @@
         login();
         main();
       }}>Login</button>
-      <br><br>
+      <br>
       <button onclick={() => {
         password = "";
         localStorage.setItem("password", "");
         login();
         main();
       }}>Logout</button>
+    </div>
+
+    <div>
+      <h2>Run python</h2>
+      <button onclick={() => sendOrder({name:"python", code: window.python.value})}>Send</button>
+      <br>
+      <textarea id="python"></textarea>
     </div>
   </header>
   

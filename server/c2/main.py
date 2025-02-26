@@ -50,17 +50,24 @@ def register_machine(version: int, request: Request):
 	print("Registered: ", uid)
 	return uid
 
+async def send_orders(uid: str):
+	if uid not in active_machines:
+		return
+	if machines[uid].orders:
+		await active_machines[uid].send_json({"event":"order", "orders":machines[uid].orders})
+	machines[uid].orders = []
+
 @mach_router.websocket("/ws/{version}/{machine_id}")
 async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine_id: Annotated[str, Path(min_length=32,max_length=32,pattern=r"^[0-9a-fA-F]{32}$")]):
 	await websocket.accept()
 	active_machines[machine_id] = websocket
-	machines[machine_id].on_connect(websocket.client.host)
-	await broadcast_to_dashboards({"event":"connected", "machine": machines[machine_id].__dict__})
 	try:
+		machines[machine_id].on_connect(websocket.client.host)
+		await broadcast_to_dashboards({"event":"connected", "machine": machines[machine_id].__dict__})
+		await send_orders(machine_id)
 		while True:
 			data = await websocket.receive_json()
-			# await manager.send_personal_message(f"You wrote: {data}", websocket)
-	except WebSocketDisconnect:
+	except:# WebSocketDisconnect:
 		machines[machine_id].on_disconnect(websocket.client.host)
 		await broadcast_to_dashboards({"event":"disconnected", "machine": machines[machine_id].__dict__})
 		del active_machines[machine_id]
@@ -80,8 +87,10 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 			data = await websocket.receive_json()
 			match data["event"]:
 				case "order":
-					for i in data["ids"]:
-						active_machines[i].send(data["order"])
+					for i in data["uids"]:
+						machines[i].orders.append(data["order"])
+						await send_orders(i)
+
 	except WebSocketDisconnect:
 		active_dashboards.remove(websocket)
 

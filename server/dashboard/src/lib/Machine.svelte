@@ -39,7 +39,7 @@
   <h3>Orders: </h3>
   <ul>
     {#each orders as order}
-    <li><pre>{order}</pre></li>
+    <li><pre>{JSON.stringify(order)}</pre></li>
     {/each}
   </ul>
   {/if}

