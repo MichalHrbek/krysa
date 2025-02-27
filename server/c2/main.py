@@ -11,7 +11,7 @@ from auth import Authenticator
 
 # Loading
 os.makedirs("data/machines", exist_ok=True)
-machines = {i.uid: i for i in Machine.load_all()}
+machines = {i.id: i for i in Machine.load_all()}
 
 
 # Fastapi setup
@@ -42,20 +42,23 @@ async def broadcast_to_dashboards(data):
 	for i in active_dashboards:
 		await i.send_text(data)
 
-@mach_router.get("/api/{version}/register")
-def register_machine(version: int, request: Request):
-	uid = Machine.gen_uid()
-	m = Machine(uid, version, host=request.client.host)
-	machines[uid] = m
-	print("Registered: ", uid)
-	return uid
+async def broadcast_update(machine_id):
+	await broadcast_to_dashboards({"event":"update","machines":[machines[machine_id]]})
 
-async def send_orders(uid: str):
-	if uid not in active_machines:
+@mach_router.get("/api/{version}/register")
+def register_machine(version: int, request: Request) -> str:
+	id = Machine.gen_id()
+	machines[id] = Machine(id=id, version=version)
+	machines[id].on_register(request.client.host)
+	print("Registered: ", id)
+	return id
+
+async def send_orders(machine_id: str):
+	if machine_id not in active_machines:
 		return
-	if machines[uid].orders:
-		await active_machines[uid].send_json({"event":"order", "orders":machines[uid].orders})
-	machines[uid].orders = []
+	if machines[machine_id].orders:
+		await active_machines[machine_id].send_json({"event":"order", "orders":machines[machine_id].orders})
+	machines[machine_id].orders = []
 
 @mach_router.websocket("/ws/{version}/{machine_id}")
 async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine_id: Annotated[str, Path(min_length=32,max_length=32,pattern=r"^[0-9a-fA-F]{32}$")]):
@@ -87,7 +90,7 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 			data = await websocket.receive_json()
 			match data["event"]:
 				case "order":
-					for i in data["uids"]:
+					for i in data["machine_ids"]:
 						machines[i].orders.append(data["order"])
 						await send_orders(i)
 
@@ -95,7 +98,7 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 		active_dashboards.remove(websocket)
 
 @dash_router.get("/api/machines")
-def get_machines(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)]):
+def get_machines(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)]) -> dict[Annotated[str, "Machine id"],Machine]:
 	if not Authenticator.verify_user(credentials.username, credentials.password):
 		raise HTTPException(
 			status_code=status.HTTP_401_UNAUTHORIZED,

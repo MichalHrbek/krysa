@@ -3,15 +3,17 @@ from uuid import uuid4
 import pickle
 from typing import Self
 from glob import glob
+from pydantic import BaseModel
 
-class Machine:
-	def __init__(self, uid: str, version: int, connections: dict[str, list[int]] = {}, host: str = ""):
-		self.uid = uid
-		self.version = version
-		self.connections = connections
-		self.orders: list[dict] = []
-		if host: self._register_connection(host)
-		self.connected = False
+class Machine(BaseModel):
+	id: str
+	version: int
+	connections: dict[str, list[int]] = {}
+	orders: list[dict] = []
+	connected: bool = False
+
+	def on_register(self, host):
+		self._register_connection(host)
 		self.save()
 	
 	def on_connect(self, host):
@@ -29,11 +31,11 @@ class Machine:
 	def on_disconnect(self, host):
 		self.connected = False
 	
-	def gen_uid() -> str:
+	def gen_id() -> str:
 		return uuid4().hex
 
 	def save(self):
-		with open(f'data/machines/{self.uid}.pkl', 'wb') as f:
+		with open(f'data/machines/{self.id}.pkl', 'wb') as f:
 			pickle.dump(self, f)
 	
 	def load_all() -> list[Self]:

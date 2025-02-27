@@ -48,7 +48,7 @@
     }
 
     versions = Object.fromEntries(Object.values(machines).map(v => [v.version, true]));
-    selected = Object.fromEntries(Object.values(machines).map(v => [v.uid, false]));
+    selected = Object.fromEntries(Object.values(machines).map(v => [v.id, false]));
 
     if(socket && socket.readyState === WebSocket.OPEN) await socket.close();
     socket = new WebSocket(server_url.replace(/^https/, "ws") + "ws");
@@ -59,7 +59,7 @@
       
     socket.addEventListener("message", (event) => {
       const e = JSON.parse(event.data);
-      machines[e.machine.uid] = e.machine;
+      machines[e.machine.id] = e.machine;
     });
   }
 
@@ -67,12 +67,12 @@
   {
     if (confirm(`Are you sure? (${num_selected()} machines selected)`))
     {
-      socket.send(JSON.stringify({event:"order", uids: Object.keys(selected).filter(uid => selected[uid]), order: order}));
+      socket.send(JSON.stringify({event:"order", machine_ids: Object.keys(selected).filter(id => selected[id]), order: order}));
     }
   }
 
-  function is_shown(uid) {
-    return versions[machines[uid].version] && ((machines[uid].connected && show_connected) || (!machines[uid].connected && show_disconnected));
+  function is_shown(machine_id) {
+    return versions[machines[machine_id].version] && ((machines[machine_id].connected && show_connected) || (!machines[machine_id].connected && show_disconnected));
   }
 
   function num_selected() {
@@ -100,15 +100,15 @@
 
     <div>
       <h2>Selection</h2>
-      <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = true)}>Select all</button>
-      <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = false)}>Deselect all</button>
+      <button onclick={() => Object.keys(selected).forEach(id => selected[id] = true)}>Select all</button>
+      <button onclick={() => Object.keys(selected).forEach(id => selected[id] = false)}>Deselect all</button>
       <br>
-      <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = is_shown(uid) ? true : selected[uid])}>Select visible</button>
-      <button onclick={() => Object.keys(selected).forEach(uid => selected[uid] = is_shown(uid) ? false : selected[uid])}>Deselect visible</button>
+      <button onclick={() => Object.keys(selected).forEach(id => selected[id] = is_shown(id) ? true : selected[id])}>Select visible</button>
+      <button onclick={() => Object.keys(selected).forEach(id => selected[id] = is_shown(id) ? false : selected[id])}>Deselect visible</button>
       <br>
       <button onclick={() => {
         if (confirm(`Are you sure? (${num_selected()} machines selected)`)) {
-          for (const [uid, sel] of Object.entries(selected)) {
+          for (const [machine_id, sel] of Object.entries(selected)) {
             // if (sel) 
           }
         }
@@ -139,8 +139,8 @@
   </header>
   
   <div class="machines">
-    {#each Object.values(machines) as { uid, version, connected, connections, orders } (uid)}
-    <Machine id={uid} version={version} connected={connected} connections={connections} orders={orders} bind:selected={selected[uid]} hidden={!is_shown(uid)}/>
+    {#each Object.values(machines) as { id, version, connected, connections, orders } (id)}
+    <Machine id={id} version={version} connected={connected} connections={connections} orders={orders} bind:selected={selected[id]} hidden={!is_shown(id)}/>
     {/each}
   </div>
 </main>
