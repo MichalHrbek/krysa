@@ -5,6 +5,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, WebSocketException,
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
+from fastapi.encoders import jsonable_encoder
 
 from machine import Machine
 from auth import Authenticator
@@ -38,18 +39,19 @@ async def broadcast_to_dashboards(data):
 	if not active_dashboards:
 		return
 	if type(data) != str:
-		data = json.dumps(data)
+		data = json.dumps(jsonable_encoder(data))
 	for i in active_dashboards:
 		await i.send_text(data)
 
 async def broadcast_update(machine_id):
-	await broadcast_to_dashboards({"event":"update","machines":[machines[machine_id]]})
+	await broadcast_to_dashboards({"event":"update","machine":machines[machine_id]})
 
 @mach_router.get("/api/{version}/register")
-def register_machine(version: int, request: Request) -> str:
+async def register_machine(version: int, request: Request) -> str:
 	id = Machine.gen_id()
 	machines[id] = Machine(id=id, version=version)
 	machines[id].on_register(request.client.host)
+	await broadcast_update(id)
 	print("Registered: ", id)
 	return id
 
@@ -66,13 +68,13 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 	active_machines[machine_id] = websocket
 	try:
 		machines[machine_id].on_connect(websocket.client.host)
-		await broadcast_to_dashboards({"event":"connected", "machine": machines[machine_id].__dict__})
+		await broadcast_update(machine_id)
 		await send_orders(machine_id)
 		while True:
 			data = await websocket.receive_json()
 	except:# WebSocketDisconnect:
 		machines[machine_id].on_disconnect(websocket.client.host)
-		await broadcast_to_dashboards({"event":"disconnected", "machine": machines[machine_id].__dict__})
+		await broadcast_update(machine_id)
 		del active_machines[machine_id]
 
 @dash_router.websocket("/ws")
@@ -93,6 +95,7 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 					for i in data["machine_ids"]:
 						machines[i].orders.append(data["order"])
 						await send_orders(i)
+						await broadcast_update(i)
 
 	except WebSocketDisconnect:
 		active_dashboards.remove(websocket)

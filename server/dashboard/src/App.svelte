@@ -30,6 +30,10 @@
 
   let socket;
   
+  function register_machine(machine) {
+    if(!versions.hasOwnProperty(machine.versions)) versions[machine.version] = true;
+    selected[machine.id] = false;
+  }
   
   async function main()
   {
@@ -47,8 +51,9 @@
       return;
     }
 
-    versions = Object.fromEntries(Object.values(machines).map(v => [v.version, true]));
-    selected = Object.fromEntries(Object.values(machines).map(v => [v.id, false]));
+    for (const [id, machine] of Object.entries(machines)) {
+      register_machine(machine);
+    }
 
     if(socket && socket.readyState === WebSocket.OPEN) await socket.close();
     socket = new WebSocket(server_url.replace(/^https/, "ws") + "ws");
@@ -59,6 +64,7 @@
       
     socket.addEventListener("message", (event) => {
       const e = JSON.parse(event.data);
+      if (!machines.hasOwnProperty(e.machine.id)) register_machine(e.machine);
       machines[e.machine.id] = e.machine;
     });
   }
@@ -109,7 +115,7 @@
       <button onclick={() => {
         if (confirm(`Are you sure? (${num_selected()} machines selected)`)) {
           for (const [machine_id, sel] of Object.entries(selected)) {
-            // if (sel) 
+            // TODO: rework order system
           }
         }
       }}>Cancel orders</button>
