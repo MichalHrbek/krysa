@@ -1,4 +1,3 @@
-
 # RAT
 ## Dependencies
 - python3
