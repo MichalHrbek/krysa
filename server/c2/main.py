@@ -8,11 +8,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 
 from machine import Machine
+from order import Order
 from auth import Authenticator
 
 # Loading
 os.makedirs("data/machines", exist_ok=True)
 machines = {i.id: i for i in Machine.load_all()}
+orders = {i.id: i for i in Order.load_all()}
 
 
 # Fastapi setup

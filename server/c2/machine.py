@@ -9,7 +9,6 @@ class Machine(BaseModel):
 	id: str
 	version: int
 	connections: dict[str, list[int]] = {}
-	orders: list[dict] = []
 	connected: bool = False
 
 	def on_register(self, host):
