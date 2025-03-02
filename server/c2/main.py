@@ -1,4 +1,4 @@
-import json, os
+import json, os, traceback
 from typing import Annotated
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, WebSocketException, APIRouter, Request, HTTPException, Path, Depends, status
@@ -72,24 +72,29 @@ async def register_machine(version: int, request: Request) -> str:
 	print("Registered: ", id)
 	return id
 
-async def send_orders(machine_id: str):
-	if machine_id not in active_machines:
-		return
-	if machines[machine_id].orders:
-		await active_machines[machine_id].send_json({"event":"order", "orders":machines[machine_id].orders})
-	machines[machine_id].orders = []
+async def send_orders():
+	for i in sorted(orders.values(), lambda o: o.creation_date):
+		for j in i.pending[:]:
+			if j in active_machines:
+				try:
+					await active_machines[j].send_json({"event":"order", "orders":[i.data]})
+				except:
+					traceback.print_exc()
+				else:
+					i.pending.remove(j)
+					i.done.append(j)
 
 @mach_router.websocket("/ws/{version}/{machine_id}")
 async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine_id: Annotated[str, Path(min_length=32,max_length=32,pattern=r"^[0-9a-fA-F]{32}$")]):
 	await websocket.accept()
-	active_machines[machine_id] = websocket
 	try:
+		active_machines[machine_id] = websocket
 		machines[machine_id].on_connect(websocket.client.host)
 		await broadcast_update(machine_id)
 		await send_orders(machine_id)
 		while True:
 			data = await websocket.receive_json()
-	except:# WebSocketDisconnect:
+	finally:
 		machines[machine_id].on_disconnect(websocket.client.host)
 		await broadcast_update(machine_id)
 		del active_machines[machine_id]
@@ -110,7 +115,8 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 			match data["event"]:
 				case "order":
 					for i in data["machine_ids"]:
-						machines[i].orders.append(data["order"])
+						# machines[i].orders.append(data["order"])
+						# TODO: Order api
 						await send_orders(i)
 						await broadcast_update(i)
 
