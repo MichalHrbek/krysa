@@ -16,16 +16,20 @@ machines = {i.id: i for i in Machine.load_all()}
 
 
 # Fastapi setup
-app = FastAPI()
+app = FastAPI(
+    docs_url=None,
+    redoc_url=None,
+)
 dash_security = HTTPBasic()
 
-app.add_middleware(
-	CORSMiddleware,
-	allow_origins=["*"],
-	allow_credentials=True,
-	allow_methods=["*"],
-	allow_headers=["*"],
-)
+if os.environ.get("CORS"):
+	app.add_middleware(
+		CORSMiddleware,
+		allow_origins=["*"],
+		allow_credentials=True,
+		allow_methods=["*"],
+		allow_headers=["*"],
+	)
 
 dash_router = APIRouter()
 mach_router = APIRouter()
@@ -45,6 +49,14 @@ async def broadcast_to_dashboards(data):
 
 async def broadcast_update(machine_id):
 	await broadcast_to_dashboards({"event":"update","machine":machines[machine_id]})
+
+def auth_dashboard(credentials: HTTPBasicCredentials):
+	if not Authenticator.verify_user(credentials.username, credentials.password):
+		raise HTTPException(
+			status_code=status.HTTP_401_UNAUTHORIZED,
+			detail="Incorrect username or password",
+			headers={"WWW-Authenticate": "Basic"},
+		)
 
 @mach_router.get("/api/{version}/register")
 async def register_machine(version: int, request: Request) -> str:
@@ -102,12 +114,7 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 
 @dash_router.get("/api/machines")
 def get_machines(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)]) -> dict[Annotated[str, "Machine id"],Machine]:
-	if not Authenticator.verify_user(credentials.username, credentials.password):
-		raise HTTPException(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Incorrect username or password",
-			headers={"WWW-Authenticate": "Basic"},
-		)
+	auth_dashboard(credentials)
 	return machines
 
 # follow_symlink does the exact opposite of what it's supposed to and also crashes (0.45.3)???? https://github.com/encode/starlette/discussions/2850
