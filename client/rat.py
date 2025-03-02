@@ -16,7 +16,8 @@ try:
 	from websockets.asyncio.client import connect
 except:
 	subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "websockets"])
-	from websockets.asyncio.client import connect
+	os.execv(sys.executable, [sys.executable] + sys.argv)
+	os.execv(__file__, sys.argv)
 
 script_path = os.path.abspath(__file__)
 state_path = script_path + ".pkl"
