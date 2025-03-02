@@ -16,10 +16,13 @@ machines = {i.id: i for i in Machine.load_all()}
 
 
 # Fastapi setup
-app = FastAPI(
-    docs_url=None,
-    redoc_url=None,
-)
+if os.environ.get("DOCS"):
+	app = FastAPI()
+else:
+	app = FastAPI(
+		docs_url=None,
+		redoc_url=None,
+	)
 dash_security = HTTPBasic()
 
 if os.environ.get("CORS"):
