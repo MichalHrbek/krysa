@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from typing import Self
 from glob import glob
-import pickle
-import os
+import pickle, os, traceback
+import con
 
 class Order(BaseModel):
 	id: str
@@ -31,6 +31,17 @@ class Order(BaseModel):
 				o = pickle.load(f)
 				orders.append(o)
 		return orders
+	
+	async def send_to_pending(self):
+		for i in self.pending:
+			if i in con.active_machines:
+				try:
+					await con.active_machines[i].send_json({"event":"order", "orders":[self]})
+				except:
+					traceback.print_exc()
+				else:
+					self.pending.remove(i)
+					self.done.append(i)
 
 os.makedirs("data/orders", exist_ok=True)
 all = {i.id: i for i in Order.load_all()}
