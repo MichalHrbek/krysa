@@ -1,9 +1,8 @@
 from datetime import datetime
-import pickle
+import pickle, os, traceback
 from typing import Self
 from glob import glob
 from pydantic import BaseModel
-import os
 import orders
 import con
 
@@ -35,7 +34,7 @@ class Machine(BaseModel):
 		try:
 			await con.broadcast_update(self)
 		except:
-			pass
+			traceback.print_exc()
 		finally:
 			del con.active_machines[self.id]
 
@@ -66,9 +65,7 @@ class Machine(BaseModel):
 		try:
 			await con.active_machines[self.id].send_json({"event":"order", "orders":[i.data for i in pending]})
 		except:
-			import traceback
 			traceback.print_exc()
-			print(f"Couldn't send orders to {self.id}")
 		else:
 			for i in pending:
 				i.pending.remove(self.id)

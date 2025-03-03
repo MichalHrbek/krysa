@@ -61,7 +61,6 @@ def update_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_secur
 	orders.all[order_id] = orders.all[order_id].model_copy(update=order.model_dump(exclude_unset=True))
 	return orders.all[order_id]
 
-
 @dash_router.delete("/api/orders/{order_id}")
 def delete_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)], order_id: Uid):
 	auth_dashboard(credentials)

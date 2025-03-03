@@ -8,7 +8,6 @@ from dashboard_routes import dash_router
 from rat_routes import rat_router
 
 
-# Fastapi setup
 if os.environ.get("DOCS"):
 	app = FastAPI()
 else:
