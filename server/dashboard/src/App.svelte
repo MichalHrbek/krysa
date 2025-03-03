@@ -97,11 +97,13 @@
       <input type="checkbox" name="connected" bind:checked={show_connected}><br>
       <label for="disconnected">Disconnected</label>
       <input type="checkbox" name="disconnected" bind:checked={show_disconnected}><br>
-      <label for="versions">Versions:</label>
-      {#each Object.keys(versions) as v}
-      <label for="v{v}">v{v}</label>
-      <input type="checkbox" name="v{v}" bind:checked={versions[v]}>
-      {/each}
+      <details>
+        <summary>Versions</summary>
+        {#each Object.keys(versions) as v}
+        <label for="v{v}">v{v}</label>
+        <input type="checkbox" name="v{v}" bind:checked={versions[v]}>
+        {/each}
+      </details>
     </div>
 
     <div>
