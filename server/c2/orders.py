@@ -5,12 +5,12 @@ import pickle, os, traceback
 import con
 
 class Order(BaseModel):
-	id: str
+	id: str = None
 	name: str
 	pending: list[str] = []
 	done: list[str] = []
-	data: dict
-	creation_date: int
+	data: dict = {}
+	creation_date: int = 0
 
 	def save(self):
 		with open(f'data/orders/{self.id}.pkl', 'wb') as f:

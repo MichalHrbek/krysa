@@ -1,19 +1,21 @@
 <script>
   import Machine from './lib/Machine.svelte';
+  import Order from './lib/Order.svelte';
 
   let server_url = localStorage.getItem("server_url");
   let username = localStorage.getItem("username");
   let password = localStorage.getItem("password");
   let auth_headers = {};
+  let encoded_credentials = ""
   update_auth();
   if (!server_url || !username || !password) {
     login();
   }
 
   function update_auth() {
-    const encodedCredentials = btoa(`${username}:${password}`);
+    encoded_credentials = btoa(`${username}:${password}`);
     auth_headers = {
-        "Authorization": `Basic ${encodedCredentials}`,
+      "Authorization": `Basic ${encoded_credentials}`,
     }
   }
 
@@ -79,8 +81,20 @@
       
     socket.addEventListener("message", (event) => {
       const e = JSON.parse(event.data);
-      if (!machines.hasOwnProperty(e.machine.id)) register_machine(e.machine);
-      machines[e.machine.id] = e.machine;
+      if (e.type == "delete") {
+        if (e.order) {
+          delete orders[e.order.id];
+        }
+      }
+      else if (e.type == "update") {
+        if (e.order) {
+          orders[e.order.id] = e.order;
+        }
+        if (e.machine) {
+          if (!machines.hasOwnProperty(e.machine.id)) register_machine(e.machine);
+          machines[e.machine.id] = e.machine;
+        }
+      }
     });
   }
 
@@ -147,21 +161,44 @@
       </div>
     </header>
   
-    <main>
-      <div class="machines">
-        {#each Object.values(machines) as { id, version, connected, connections } (id)}
-        <Machine id={id} version={version} connected={connected} connections={connections} orders={orders} bind:selected={selected[id]} hidden={!is_shown(id)}/>
-        {/each}
-      </div>
+    <main class="machines">
+      {#each Object.values(machines) as { id, version, connected, connections } (id)}
+      <Machine {id} {version} {connected} {connections} {orders} bind:selected={selected[id]} hidden={!is_shown(id)}/>
+      {/each}
     </main>
   </article>
   
   <article class="right">
     <header>
-      <h2>Orders</h2>
+      <div>
+        <h2>Orders</h2>
+        <label for="ordername"></label>
+        <input type="text" name="ordername" id="ordername" placeholder="Order name">
+        <button onclick={() => {
+          return fetch(server_url + "api/orders/create", {
+              method: "PUT",
+              body: JSON.stringify({name:window.ordername.value}),
+              headers: {
+                "Authorization": `Basic ${encoded_credentials}`,
+                'content-type': 'application/json',
+              },
+          }).then(response => {
+            if (!response.ok) {
+              alert("Problem creating order")
+            }
+            return response.json()
+          }).then(order => {
+            orders[order.id] = order;
+          })
+        }}>
+        Create order</button>
+      </div>
+
     </header>
     <main class="orders">
-
+      {#each Object.values(orders) as { id, name, pending, done, creation_date } (id)}
+      <Order {id} {done} {creation_date} bind:pending={orders[id].pending} bind:name={orders[id].name}/>
+      {/each}
     </main>
   </article>
 </div>
@@ -176,7 +213,7 @@
   }
 
   .orders {
-    background-color: beige;
+    
   }
 
   header {
