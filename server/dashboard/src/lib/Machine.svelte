@@ -1,7 +1,6 @@
 <script>
   let { id, version, connected, connections, classs, orders, selected=$bindable(false), hidden=false } = $props();
   let expanded = $state(false);
-  
 </script>
 
 <div class="machine {connected ? 'connected' : 'disconnected'} {expanded ? 'expanded' : ''} {selected ? 'selected' : ''}" hidden={hidden}>
@@ -18,30 +17,49 @@
   <p><b>Version:</b> {version}</p>
   <p><b>Last connection:</b> {new Date(Math.max(...Object.values(connections).flat()) * 1000).toLocaleString()}</p>
   {#if expanded}
-  <h3>Connections:</h3>
-  <ul>
-    {#each Object.entries(connections) as [ip, timestamps] (ip)}
-    <li>
-      <h4>{ip}</h4>
-      <div class="horizontal-list">
-        {#each [...timestamps].sort().reverse() as t, index}
-        {#if index === 0}
-        <span>{t}&nbsp;({Math.round(t-Date.now()/1000)})</span>
-        {:else}
-        <span>{t}</span>
-        {/if}
-        {/each}
-      </div>
-    </li>
-    {/each}
-  </ul>
+  <details open>
+    <summary><b>Connections</b></summary>
+    <ul>
+      {#each Object.entries(connections) as [ip, timestamps] (ip)}
+      <li>
+        <details>
+          <summary><b>{ip}</b></summary>
+          <div class="horizontal-list">
+            {#each [...timestamps].sort().reverse() as t, index}
+            {#if index === 0}
+            <span>{t}&nbsp;({Math.round(t-Date.now()/1000)})</span>
+            {:else}
+            <span>{t}</span>
+            {/if}
+            {/each}
+          </div>
+        </details>
+      </li>
+      {/each}
+    </ul>
+  </details>
 
-  <h3>Orders: </h3>
-  <ul>
-    {#each orders as order}
-    <li><pre>{JSON.stringify(order)}</pre></li>
-    {/each}
-  </ul>
+  <details open>
+    <summary><b>Pending orders</b></summary>
+    <ul>
+      {#each orders as order}
+      {#if order.pending.includes(id)}
+      <li><pre>{JSON.stringify(order)}</pre></li>
+      {/if}
+      {/each}
+    </ul>
+  </details>
+
+  <details open>
+    <summary><b>Completed orders</b></summary>
+    <ul>
+      {#each orders as order}
+      {#if order.done.includes(id)}
+      <li><pre>{JSON.stringify(order)}</pre></li>
+      {/if}
+      {/each}
+    </ul>
+  </details>
   {/if}
 </div>
 
