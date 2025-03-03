@@ -15,13 +15,11 @@ class Machine(BaseModel):
 
 	async def on_register(self, host):
 		self._register_connection(host)
-		self.save()
-		await con.broadcast_update(all[id])
+		await con.broadcast_update(all[self.id])
 	
 	async def on_connect(self, host):
 		self.connected = True
 		self._register_connection(host)
-		self.save()
 		await self.send_pending_orders()
 		await con.broadcast_update(self)
 	
@@ -44,7 +42,11 @@ class Machine(BaseModel):
 	def save(self):
 		with open(f'data/machines/{self.id}.pkl', 'wb') as f:
 			pickle.dump(self, f)
-	
+
+	def __setattr__(self, key, value):
+		super().__setattr__(key, value)
+		self.save()
+
 	def load_all() -> list[Self]:
 		machines = []
 		for i in glob("data/machines/*.pkl"):
@@ -62,9 +64,11 @@ class Machine(BaseModel):
 			return
 		pending = self.get_pending_orders()
 		try:
-			await con.active_machines[id].send_json({"event":"order", "orders":[i.data for i in pending]})
+			await con.active_machines[self.id].send_json({"event":"order", "orders":[i.data for i in pending]})
 		except:
-			print(f"Could't send orders to {self.id}")
+			import traceback
+			traceback.print_exc()
+			print(f"Couldn't send orders to {self.id}")
 		else:
 			for i in pending:
 				i.pending.remove(self.id)

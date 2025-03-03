@@ -7,6 +7,7 @@ import machines
 import orders
 from auth import Authenticator
 import con
+from uid import Uid, gen_uid
 
 dash_router = APIRouter()
 dash_security = HTTPBasic()
@@ -46,3 +47,23 @@ def get_machines(credentials: Annotated[HTTPBasicCredentials, Depends(dash_secur
 def get_orders(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)]) -> dict[str,orders.Order]:
 	auth_dashboard(credentials)
 	return orders.all
+
+@dash_router.put("/api/orders/create", response_model=orders.Order)
+def create_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)], order: orders.Order) -> orders.Order:
+	auth_dashboard(credentials)
+	order.id = gen_uid()
+	orders.all[order.id] = order
+	return order
+
+@dash_router.patch("/api/orders/{order_id}", response_model=orders.Order)
+def update_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)], order_id: Uid, order: orders.Order) -> orders.Order:
+	auth_dashboard(credentials)
+	orders.all[order_id] = orders.all[order_id].model_copy(update=order.model_dump(exclude_unset=True))
+	return orders.all[order_id]
+
+
+@dash_router.delete("/api/orders/{order_id}")
+def delete_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)], order_id: Uid):
+	auth_dashboard(credentials)
+	orders.all[order_id].delete()
+	del orders.all[order_id]

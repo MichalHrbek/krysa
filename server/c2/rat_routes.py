@@ -1,5 +1,4 @@
-from fastapi import WebSocket, APIRouter, Request
-from fastapi.encoders import jsonable_encoder
+from fastapi import WebSocket, APIRouter, Request, WebSocketDisconnect
 
 import machines
 import con
@@ -19,9 +18,12 @@ async def register_machine(version: int, request: Request) -> Uid:
 async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine_id: Uid):
 	await websocket.accept()
 	try:
+		print(f"Machine {machine_id} connected")
 		con.active_machines[machine_id] = websocket
 		await machines.all[machine_id].on_connect(websocket.client.host)
 		while True:
 			data = await websocket.receive_json()
+	except WebSocketDisconnect:
+		print(f"Machine {machine_id} left")
 	finally:
 		await machines.all[machine_id].on_disconnect(websocket.client.host)
