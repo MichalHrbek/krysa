@@ -1,5 +1,4 @@
 from datetime import datetime
-from uuid import uuid4
 import pickle
 from typing import Self
 from glob import glob
@@ -41,9 +40,6 @@ class Machine(BaseModel):
 			pass
 		finally:
 			del con.active_machines[self.id]
-	
-	def gen_id() -> str:
-		return uuid4().hex
 
 	def save(self):
 		with open(f'data/machines/{self.id}.pkl', 'wb') as f:
