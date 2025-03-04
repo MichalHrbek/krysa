@@ -1,11 +1,13 @@
-<script>
+<script lang="ts">
   import Machine from './lib/Machine.svelte';
   import Order from './lib/Order.svelte';
+  import type { OrderType } from './lib/types/OrderType';
+  import type { MachineType } from './lib/types/MachineType';
 
-  let server_url = localStorage.getItem("server_url");
-  let username = localStorage.getItem("username");
-  let password = localStorage.getItem("password");
-  let auth_headers = {};
+  let server_url = localStorage.getItem("server_url")!;
+  let username = localStorage.getItem("username")!;
+  let password = localStorage.getItem("password")!;
+  let auth_headers: any = {};
   let encoded_credentials = ""
   update_auth();
   if (!server_url || !username || !password) {
@@ -23,34 +25,34 @@
     if (!server_url) {
       server_url = window.location.href.replace(/\/ui(?:\/.*)?$/, "/");
     }
-    server_url = window.prompt("Server url:", server_url);
+    server_url = window.prompt("Server url:", server_url) ?? server_url;
     localStorage.setItem("server_url", server_url);
 
-    username = window.prompt("Username:", username)
+    username = window.prompt("Username:", username) ?? username;
     localStorage.setItem("username", username);
 
-    password = window.prompt("Password:", password)
+    password = window.prompt("Password:", password) ?? password;
     localStorage.setItem("password", password);
 
     update_auth();
   }
 
-  let machines = $state({});
-  let orders = $state({});
-  let selected = $state({});
-  let versions = $state({});
+  let machines: Record<string, MachineType> = $state({});
+  let orders: Record<string, OrderType> = $state({});
+  let selected: Record<string, boolean> = $state({});
+  let versions: Record<string, boolean> = $state({});
   let show_connected = $state(true);
   let show_disconnected = $state(true);
   
 
-  let socket;
+  let socket: WebSocket;
   
-  function register_machine(machine) {
-    if(!versions.hasOwnProperty(machine.versions)) versions[machine.version] = true;
+  function register_machine(machine: MachineType) {
+    if(!versions.hasOwnProperty(machine.version)) versions[machine.version] = true;
     selected[machine.id] = false;
   }
 
-  async function authed_get(url) {
+  async function authed_get(url: string) {
     const response = await fetch(url, {headers: auth_headers});
   
     if (!response.ok) {
@@ -63,7 +65,7 @@
   
   async function main()
   {
-    let new_machines = await authed_get(server_url + "api/machines");
+    let new_machines: Record<string, MachineType> = await authed_get(server_url + "api/machines");
     for (const [id, machine] of Object.entries(new_machines)) {
       register_machine(machine);
     }
@@ -81,12 +83,12 @@
       
     socket.addEventListener("message", (event) => {
       const e = JSON.parse(event.data);
-      if (e.type == "delete") {
+      if (e.event == "delete") {
         if (e.order) {
           delete orders[e.order.id];
         }
       }
-      else if (e.type == "update") {
+      else if (e.event == "update") {
         if (e.order) {
           orders[e.order.id] = e.order;
         }
@@ -98,7 +100,7 @@
     });
   }
 
-  function is_shown(machine_id) {
+  function is_shown(machine_id: string) {
     return versions[machines[machine_id].version] && ((machines[machine_id].connected && show_connected) || (!machines[machine_id].connected && show_disconnected));
   }
 
@@ -177,7 +179,7 @@
         <button onclick={() => {
           return fetch(server_url + "api/orders/create", {
               method: "PUT",
-              body: JSON.stringify({name:window.ordername.value}),
+              body: JSON.stringify({name:(document.getElementById("ordername") as HTMLInputElement).value}),
               headers: {
                 "Authorization": `Basic ${encoded_credentials}`,
                 'content-type': 'application/json',
@@ -197,7 +199,7 @@
     </header>
     <main class="orders">
       {#each Object.values(orders) as { id, name, pending, done, creation_date } (id)}
-      <Order {id} {done} {creation_date} bind:pending={orders[id].pending} bind:name={orders[id].name}/>
+      <Order {id} {done} {creation_date} {pending} {name} selected_machines={selected} {auth_headers}/>
       {/each}
     </main>
   </article>

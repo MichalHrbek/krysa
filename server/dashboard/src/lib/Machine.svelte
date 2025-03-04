@@ -1,5 +1,14 @@
-<script>
-  let { id, version, connected, connections, orders, selected=$bindable(false), hidden=false } = $props();
+<script lang="ts">
+  let { id, version, connected, connections, orders, selected=$bindable(false), hidden=false }:
+  {
+    id: string,
+    version: number,
+    connected: boolean,
+    connections: Record<string, number[]>,
+    orders: Record<string, any>,
+    selected: boolean,
+    hidden: boolean
+  } = $props();
   let expanded = $state(false);
 </script>
 
@@ -42,7 +51,7 @@
   <details open>
     <summary><b>Pending orders</b></summary>
     <ul>
-      {#each orders as order}
+      {#each Object.values(orders) as order}
       {#if order.pending.includes(id)}
       <li><pre>{JSON.stringify(order)}</pre></li>
       {/if}
@@ -53,7 +62,7 @@
   <details open>
     <summary><b>Completed orders</b></summary>
     <ul>
-      {#each orders as order}
+      {#each Object.values(orders) as order}
       {#if order.done.includes(id)}
       <li><pre>{JSON.stringify(order)}</pre></li>
       {/if}
