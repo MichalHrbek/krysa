@@ -14,13 +14,13 @@ class Machine(BaseModel):
 
 	async def on_register(self, host):
 		self._register_connection(host)
-		await con.broadcast_update(all[self.id])
+		await con.broadcast_machine_update(all[self.id])
 	
 	async def on_connect(self, host):
 		self.connected = True
 		self._register_connection(host)
 		await self.send_pending_orders()
-		await con.broadcast_update(self)
+		await con.broadcast_machine_update(self)
 	
 	def _register_connection(self, host):
 		time = int(datetime.now().timestamp())
@@ -32,7 +32,7 @@ class Machine(BaseModel):
 	async def on_disconnect(self, host):
 		self.connected = False
 		try:
-			await con.broadcast_update(self)
+			await con.broadcast_machine_update(self)
 		except:
 			traceback.print_exc()
 		finally:
