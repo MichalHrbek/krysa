@@ -5,7 +5,7 @@
 - websockets (tries to pip install on launch)
 ## Usage
 1) Change `state['servers']` in `rat.py` to your c2 servers
-2) Either deploy on your or use `packer.py` and `loader.py`
+2) Either deploy on your own or use `packer.py` and `loader.py`
 
 # Loader
 - Loader attempts to download multiple payloads from multiple servers
