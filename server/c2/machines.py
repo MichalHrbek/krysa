@@ -74,7 +74,7 @@ class Machine(BaseModel):
 			for i in pending:
 				i.pending.remove(self.id)
 				i.done.append(self.id)
-				con.broadcast_order_update(i)
+				await con.broadcast_order_update(i)
 
 
 os.makedirs("data/machines", exist_ok=True)

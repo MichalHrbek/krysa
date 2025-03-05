@@ -36,13 +36,14 @@ class Order(BaseModel):
 		for i in self.pending:
 			if i in con.active_machines:
 				try:
-					await con.active_machines[i].send_json({"event":"order", "orders":[self]})
+					await con.active_machines[i].send_json({"event":"order", "orders":[self.data]})
 				except:
 					traceback.print_exc()
 				else:
 					self.pending.remove(i)
 					self.done.append(i)
 					await con.broadcast_order_update(self)
+		self.save()
 
 os.makedirs("data/orders", exist_ok=True)
 all = {i.id: i for i in Order.load_all()}
