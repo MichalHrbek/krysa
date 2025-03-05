@@ -1,5 +1,3 @@
-import { expoOut } from "svelte/easing";
-
 export const server_config = JSON.parse(localStorage.getItem("server_config") ?? "null") ?? {};
 
 if (!server_config.url || !server_config.username || !server_config.password) {
@@ -10,10 +8,9 @@ export function get_encoded_credentials(): string {
   return btoa(`${server_config.username}:${server_config.password}`);
 }
 
-export function get_auth_header(): any {
-  return {
-    "Authorization": `Basic ${get_encoded_credentials()}`,
-  }
+export function get_auth_header(headers: any = {}): any {
+  headers["Authorization"] = `Basic ${get_encoded_credentials()}`
+  return headers;
 }
 
 export function login_prompt() {

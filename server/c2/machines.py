@@ -28,6 +28,7 @@ class Machine(BaseModel):
 			self.connections[host].append(time)
 		else:
 			self.connections[host] = [time]
+		self.save()
 	
 	async def on_disconnect(self, host):
 		self.connected = False
@@ -44,7 +45,8 @@ class Machine(BaseModel):
 
 	def __setattr__(self, key, value):
 		super().__setattr__(key, value)
-		self.save()
+		if self.id:
+			self.save()
 
 	def load_all() -> list[Self]:
 		machines = []
@@ -62,6 +64,8 @@ class Machine(BaseModel):
 		if self.id not in con.active_machines:
 			return
 		pending = self.get_pending_orders()
+		if not pending:
+			return
 		try:
 			await con.active_machines[self.id].send_json({"event":"order", "orders":[i.data for i in pending]})
 		except:
@@ -70,6 +74,7 @@ class Machine(BaseModel):
 			for i in pending:
 				i.pending.remove(self.id)
 				i.done.append(self.id)
+				con.broadcast_order_update(i)
 
 
 os.makedirs("data/machines", exist_ok=True)

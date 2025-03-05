@@ -144,13 +144,12 @@
         <label for="ordername"></label>
         <input type="text" name="ordername" id="ordername" placeholder="Order name">
         <button onclick={() => {
-          return fetch(server_config.server_url + "api/orders/create", {
+          return fetch(server_config.url + "api/orders/create", {
               method: "PUT",
               body: JSON.stringify({name:(document.getElementById("ordername") as HTMLInputElement).value}),
-              headers: {
-                "Authorization": `Basic ${get_encoded_credentials()}`,
-                'content-type': 'application/json',
-              },
+              headers: get_auth_header({
+                "Content-Type": "application/json",
+              }),
           }).then(response => {
             if (!response.ok) {
               alert("Problem creating order")
@@ -166,7 +165,7 @@
     </header>
     <main class="orders">
       {#each Object.values(orders) as { id, name, pending, done, creation_date } (id)}
-      <Order {id} {done} {creation_date} {pending} {name} selected_machines={selected}/>
+      <Order {id} {done} {creation_date} {pending} {name} selected_machines={selected} {machines}/>
       {/each}
     </main>
   </article>

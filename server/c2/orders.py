@@ -6,7 +6,7 @@ import con
 
 class Order(BaseModel):
 	id: str = None
-	name: str
+	name: str = ""
 	pending: list[str] = []
 	done: list[str] = []
 	data: dict = {}
@@ -42,6 +42,7 @@ class Order(BaseModel):
 				else:
 					self.pending.remove(i)
 					self.done.append(i)
+					await con.broadcast_order_update(self)
 
 os.makedirs("data/orders", exist_ok=True)
 all = {i.id: i for i in Order.load_all()}

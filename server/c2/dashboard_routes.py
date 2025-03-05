@@ -53,16 +53,16 @@ async def create_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash
 	auth_dashboard(credentials)
 	order.id = gen_uid()
 	orders.all[order.id] = order
+	orders.all[order.id].save()
 	await orders.all[order.id].send_to_pending()
-	await con.broadcast_order_update(order)
 	return order
 
 @dash_router.patch("/api/orders/{order_id}", response_model=orders.Order)
 async def update_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)], order_id: Uid, order: orders.Order) -> orders.Order:
 	auth_dashboard(credentials)
 	orders.all[order_id] = orders.all[order_id].model_copy(update=order.model_dump(exclude_unset=True))
+	orders.all[order_id].save()
 	await orders.all[order_id].send_to_pending()
-	await con.broadcast_order_update(order)
 	return orders.all[order_id]
 
 @dash_router.delete("/api/orders/{order_id}")
