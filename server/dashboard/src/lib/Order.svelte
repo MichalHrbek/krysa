@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { id, pending, done, name, creation_date, selected_machines, auth_headers }:
+  let { id, pending, done, name, creation_date, selected_machines }:
   {
     id: string,
     pending: string[],
@@ -7,7 +7,6 @@
     name: string,
     creation_date: number,
     selected_machines: any,
-    auth_headers: any,
   } = $props();
 
   async function send_to_selected(force=false) {

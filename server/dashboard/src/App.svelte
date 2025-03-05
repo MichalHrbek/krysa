@@ -3,39 +3,8 @@
   import Order from './lib/Order.svelte';
   import type { OrderType } from './lib/types/OrderType';
   import type { MachineType } from './lib/types/MachineType';
-
-  let server_url = localStorage.getItem("server_url")!;
-  let username = localStorage.getItem("username")!;
-  let password = localStorage.getItem("password")!;
-  let auth_headers: any = {};
-  let encoded_credentials = ""
-  update_auth();
-  if (!server_url || !username || !password) {
-    login();
-  }
-
-  function update_auth() {
-    encoded_credentials = btoa(`${username}:${password}`);
-    auth_headers = {
-      "Authorization": `Basic ${encoded_credentials}`,
-    }
-  }
-
-  function login() {
-    if (!server_url) {
-      server_url = window.location.href.replace(/\/ui(?:\/.*)?$/, "/");
-    }
-    server_url = window.prompt("Server url:", server_url) ?? server_url;
-    localStorage.setItem("server_url", server_url);
-
-    username = window.prompt("Username:", username) ?? username;
-    localStorage.setItem("username", username);
-
-    password = window.prompt("Password:", password) ?? password;
-    localStorage.setItem("password", password);
-
-    update_auth();
-  }
+  import { server_config, login_prompt, logout, get_encoded_credentials, get_auth_header } from './lib/auth';
+  
 
   let machines: Record<string, MachineType> = $state({});
   let orders: Record<string, OrderType> = $state({});
@@ -53,11 +22,11 @@
   }
 
   async function authed_get(url: string) {
-    const response = await fetch(url, {headers: auth_headers});
+    const response = await fetch(url, {headers: get_auth_header()});
   
     if (!response.ok) {
       if (response.status == 401) alert("Wrong login");
-      else alert("Problem with reaching the server at " + server_url);
+      else alert("Problem with reaching the server at " + server_config.url);
     }
     
     return await response.json();
@@ -65,20 +34,20 @@
   
   async function main()
   {
-    let new_machines: Record<string, MachineType> = await authed_get(server_url + "api/machines");
+    let new_machines: Record<string, MachineType> = await authed_get(server_config.url + "api/machines");
     for (const [id, machine] of Object.entries(new_machines)) {
       register_machine(machine);
     }
     machines = new_machines;
 
-    orders = await authed_get(server_url + "api/orders");
+    orders = await authed_get(server_config.url + "api/orders");
 
 
     if(socket && socket.readyState === WebSocket.OPEN) await socket.close();
-    socket = new WebSocket(server_url.replace(/^https/, "ws") + "ws");
+    socket = new WebSocket(server_config.url.replace(/^https/, "ws") + "ws");
 
     socket.addEventListener("open", (event) => {
-      socket.send(JSON.stringify({username:username,password:password}));
+      socket.send(JSON.stringify({username:server_config.username,password:server_config.password}));
     });
       
     socket.addEventListener("message", (event) => {
@@ -150,14 +119,12 @@
       <div>
         <h2>Server</h2>
         <button onclick={() => {
-          login();
+          login_prompt();
           main();
         }}>Login</button>
         <br>
         <button onclick={() => {
-          password = "";
-          localStorage.setItem("password", "");
-          login();
+          logout();
           main();
         }}>Logout</button>
       </div>
@@ -177,11 +144,11 @@
         <label for="ordername"></label>
         <input type="text" name="ordername" id="ordername" placeholder="Order name">
         <button onclick={() => {
-          return fetch(server_url + "api/orders/create", {
+          return fetch(server_config.server_url + "api/orders/create", {
               method: "PUT",
               body: JSON.stringify({name:(document.getElementById("ordername") as HTMLInputElement).value}),
               headers: {
-                "Authorization": `Basic ${encoded_credentials}`,
+                "Authorization": `Basic ${get_encoded_credentials()}`,
                 'content-type': 'application/json',
               },
           }).then(response => {
@@ -199,7 +166,7 @@
     </header>
     <main class="orders">
       {#each Object.values(orders) as { id, name, pending, done, creation_date } (id)}
-      <Order {id} {done} {creation_date} {pending} {name} selected_machines={selected} {auth_headers}/>
+      <Order {id} {done} {creation_date} {pending} {name} selected_machines={selected}/>
       {/each}
     </main>
   </article>
