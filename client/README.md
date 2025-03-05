@@ -18,3 +18,4 @@
 # TODOs?
 - Asymmetric Encryption
 - Rewrite in a compiled language or remove the need to install websockets
+- Steal password by aliasing sudo in .bashrc -> escalation?
