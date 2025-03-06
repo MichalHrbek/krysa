@@ -131,8 +131,10 @@
     </header>
   
     <main class="machines">
-      {#each Object.values(machines) as { id, version, connected, connections } (id)}
-      <Machine {id} {version} {connected} {connections} {orders} bind:selected={selected[id]} hidden={!is_shown(id)}/>
+      {#each Object.keys(machines) as id (id)}
+      {#if is_shown(id)}
+      <Machine bind:machine={machines[id]} {orders} bind:selected={selected[id]}/>  
+      {/if}
       {/each}
     </main>
   </article>
@@ -164,8 +166,8 @@
 
     </header>
     <main class="orders">
-      {#each Object.values(orders) as { id, name, pending, done, creation_date } (id)}
-      <Order {id} {done} {creation_date} {pending} {name} selected_machines={selected} {machines}/>
+      {#each Object.keys(orders) as id (id)}
+      <Order bind:order={orders[id]} selected_machines={selected} {machines}/>
       {/each}
     </main>
   </article>

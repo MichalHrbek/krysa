@@ -1,18 +1,17 @@
 <script lang="ts">
-  let { id, version, connected, connections, orders, selected=$bindable(false), hidden=false }:
+  import type { MachineType } from "./types/MachineType";
+  import type { OrderType } from "./types/OrderType";
+
+  let { machine=$bindable(), orders, selected=$bindable(false)}:
   {
-    id: string,
-    version: number,
-    connected: boolean,
-    connections: Record<string, number[]>,
-    orders: Record<string, any>,
-    selected: boolean,
-    hidden: boolean
+    machine: MachineType,
+    orders: Record<string, OrderType>,
+    selected: boolean
   } = $props();
   let expanded = $state(false);
 </script>
 
-<div class="machine {connected ? 'connected' : 'disconnected'} {expanded ? 'expanded' : ''} {selected ? 'selected' : ''}" hidden={hidden}>
+<div class="machine {machine.connected ? 'connected' : 'disconnected'} {expanded ? 'expanded' : ''} {selected ? 'selected' : ''}">
   <div class="buttons">
     <button aria-expanded={expanded} onclick={() => expanded = !expanded} aria-label='expand/shrink'>
       <svg viewBox="0 0 20 20" fill="none" >
@@ -22,14 +21,14 @@
     </button>
     <input type="checkbox" name="selected" bind:checked={selected}>
   </div>
-  <p><b>Id:</b> {id}</p>
-  <p><b>Version:</b> {version}</p>
-  <p><b>Last connection:</b> {new Date(Math.max(...Object.values(connections).flat()) * 1000).toLocaleString()}</p>
+  <p><b>Id:</b> {machine.id}</p>
+  <p><b>Version:</b> {machine.version}</p>
+  <p><b>Last connection:</b> {new Date(Math.max(...Object.values(machine.connections).flat()) * 1000).toLocaleString()}</p>
   {#if expanded}
   <details open>
     <summary><b>Connections</b></summary>
     <ul>
-      {#each Object.entries(connections) as [ip, timestamps] (ip)}
+      {#each Object.entries(machine.connections) as [ip, timestamps] (ip)}
       <li>
         <details>
           <summary><b>{ip}</b></summary>
@@ -52,7 +51,7 @@
     <summary><b>Pending orders</b></summary>
     <ul>
       {#each Object.values(orders) as order}
-      {#if order.pending.includes(id)}
+      {#if order.pending.includes(machine.id)}
       <li><pre>{JSON.stringify(order)}</pre></li>
       {/if}
       {/each}
@@ -63,7 +62,7 @@
     <summary><b>Completed orders</b></summary>
     <ul>
       {#each Object.values(orders) as order}
-      {#if order.done.includes(id)}
+      {#if order.done.includes(machine.id)}
       <li><pre>{JSON.stringify(order)}</pre></li>
       {/if}
       {/each}
