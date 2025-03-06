@@ -133,7 +133,7 @@
     <main class="machines">
       {#each Object.keys(machines) as id (id)}
       {#if is_shown(id)}
-      <Machine bind:machine={machines[id]} {orders} bind:selected={selected[id]}/>  
+      <Machine bind:machine={machines[id]} {orders} bind:selected={selected[id]}/>
       {/if}
       {/each}
     </main>

