@@ -1,4 +1,5 @@
 from typing import Annotated
+from datetime import datetime
 
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -53,6 +54,7 @@ async def create_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash
 	auth_dashboard(credentials)
 	order.id = gen_uid()
 	orders.all[order.id] = order
+	orders.all[order.id].creation_date = int(datetime.now().timestamp())
 	orders.all[order.id].save()
 	await orders.all[order.id].send_to_pending()
 	return order
