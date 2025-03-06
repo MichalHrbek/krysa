@@ -21,13 +21,43 @@
         }
       }
     }
-    await fetch(server_config.url + "api/orders/" + order.id, {
-      method: "PATCH",
-      headers: get_auth_header({
-        "Content-Type": "application/json"
-      }),
-      body: JSON.stringify({pending: order.pending}),
-    })
+    await fetch(server_config.url + "api/orders/" + order.id, 
+      {
+        method: "PATCH",
+        headers: get_auth_header({
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({pending: order.pending}),
+      }).then(response => {
+          if (response.ok) return response.json();
+      }).then(data => {
+        if (data) order = data;
+      })
+  }
+
+  async function unsend_to_selected() {
+    for (const [machine_id, selected] of Object.entries(selected_machines)) {
+      if (selected) {
+        if (order.pending.includes(machine_id)) {
+          const index = order.pending.indexOf(machine_id);
+          if (index > -1) {
+            order.pending.splice(index, 1);
+          }
+        }
+      }
+    }
+    await fetch(server_config.url + "api/orders/" + order.id, 
+      {
+        method: "PATCH",
+        headers: get_auth_header({
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({pending: order.pending}),
+      }).then(response => {
+          if (response.ok) return response.json();
+      }).then(data => {
+        if (data) order = data;
+      })
   }
 </script>
 
@@ -36,20 +66,28 @@
   <br>
   <button title="Send to selected machines that haven't already completed this order" onclick={async() => await send_to_selected()}>Send to selected</button>
   <button title="Send to selected machines even if they already completed this order" onclick={async() => await send_to_selected(true)}>Force send to selected</button>
+  <button title="Remove selected machines from pending" onclick={async() => await unsend_to_selected()}>Unsend to selected</button>
   <button onclick={async () => {
-    await fetch(server_config.url + "api/orders/" + order.id, {
-      method: "DELETE",   
-      headers: get_auth_header(),
-    })
+    if (confirm("Delete?")) {
+      await fetch(server_config.url + "api/orders/" + order.id, {
+        method: "DELETE",   
+        headers: get_auth_header(),
+      })
+    }
   }}>Delete</button>
   <button onclick={async () => {
-      await fetch(server_config.url + "api/orders/" + order.id, {
-        method: "PATCH",
-        headers: get_auth_header({
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({name: prompt("New name: ", order.name) ?? order.name}),
-      })
+      await fetch(server_config.url + "api/orders/" + order.id, 
+        {
+          method: "PATCH",
+          headers: get_auth_header({
+            "Content-Type": "application/json"
+          }),
+          body: JSON.stringify({name: prompt("New name: ", order.name) ?? order.name}),
+        }).then(response => {
+            if (response.ok) return response.json();
+        }).then(data => {
+          if (data) order = data;
+        })
     }}>Rename</button>
     <br>
     <br>

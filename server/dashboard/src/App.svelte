@@ -106,14 +106,6 @@
         <br>
         <button onclick={() => Object.keys(selected).forEach(id => selected[id] = is_shown(id) ? true : selected[id])}>Select visible</button>
         <button onclick={() => Object.keys(selected).forEach(id => selected[id] = is_shown(id) ? false : selected[id])}>Deselect visible</button>
-        <br>
-        <button onclick={() => {
-          if (confirm(`Are you sure? (${num_selected()} machines selected)`)) {
-            for (const [machine_id, sel] of Object.entries(selected)) {
-              // TODO: rework order system
-            }
-          }
-        }}>Cancel orders</button>
       </div>
   
       <div>
