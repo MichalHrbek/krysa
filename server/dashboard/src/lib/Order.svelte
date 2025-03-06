@@ -13,6 +13,21 @@
   let code = $state(JSON.stringify(order.data, null, "\t"));
   let saved = $state(true);
 
+  async function send_patch(body:any) {
+    await fetch(server_config.url + "api/orders/" + order.id, 
+      {
+        method: "PATCH",
+        headers: get_auth_header({
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify(body),
+      }).then(response => {
+          if (response.ok) return response.json();
+      }).then(data => {
+        if (data) order = data;
+      })
+  }
+
   async function send_to_selected(force=false) {
     for (const [machine_id, selected] of Object.entries(selected_machines)) {
       if (selected) {
@@ -21,18 +36,7 @@
         }
       }
     }
-    await fetch(server_config.url + "api/orders/" + order.id, 
-      {
-        method: "PATCH",
-        headers: get_auth_header({
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({pending: order.pending}),
-      }).then(response => {
-          if (response.ok) return response.json();
-      }).then(data => {
-        if (data) order = data;
-      })
+    send_patch({pending: order.pending});
   }
 
   async function unsend_to_selected() {
@@ -46,18 +50,7 @@
         }
       }
     }
-    await fetch(server_config.url + "api/orders/" + order.id, 
-      {
-        method: "PATCH",
-        headers: get_auth_header({
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({pending: order.pending}),
-      }).then(response => {
-          if (response.ok) return response.json();
-      }).then(data => {
-        if (data) order = data;
-      })
+    send_patch({pending: order.pending});
   }
 </script>
 
@@ -76,18 +69,7 @@
     }
   }}>Delete</button>
   <button onclick={async () => {
-      await fetch(server_config.url + "api/orders/" + order.id, 
-        {
-          method: "PATCH",
-          headers: get_auth_header({
-            "Content-Type": "application/json"
-          }),
-          body: JSON.stringify({name: prompt("New name: ", order.name) ?? order.name}),
-        }).then(response => {
-            if (response.ok) return response.json();
-        }).then(data => {
-          if (data) order = data;
-        })
+      send_patch({name: prompt("New name: ", order.name) ?? order.name});
     }}>Rename</button>
     <br>
     <br>
@@ -118,14 +100,8 @@
     <button onclick={async () => {
       try {
         order.data = JSON.parse(code);
+        send_patch({data: order.data});
         saved = true;
-        await fetch(server_config.url + "api/orders/" + order.id, {
-          method: "PATCH",
-          headers: get_auth_header({
-            "Content-Type": "application/json"
-          }),
-          body: JSON.stringify({data: order.data}),
-        })
       } catch (e) {
         alert(e);
       }
