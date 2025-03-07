@@ -8,4 +8,4 @@ COPY ./dashboard/dist ./dashui
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD fastapi run --port 8000
+CMD ["fastapi", "run", "--port", "8000"]
