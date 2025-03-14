@@ -1,7 +1,7 @@
 from typing import Annotated
 from datetime import datetime
 
-from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, APIRouter, HTTPException, Depends, status
+from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, APIRouter, HTTPException, Depends, status, Query
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 import machines
@@ -41,7 +41,7 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 		con.active_dashboards.remove(websocket)
 
 @dash_router.websocket("/logs/ws")
-async def dashboard_websocket_endpoint(websocket: WebSocket, machine:Uid|None=None, tags:list[str]|None=None):
+async def dashboard_websocket_endpoint(websocket: WebSocket, machine: Annotated[Uid | None, Query()] = None, tags:Annotated[list[str] | None, Query()] = None):
 	await websocket.accept()
 	data = await websocket.receive_json()
 	

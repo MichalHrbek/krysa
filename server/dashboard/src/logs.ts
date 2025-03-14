@@ -8,7 +8,7 @@ const app = mount(Logs, {
   target: document.getElementById('app')!,
   props: {
     machine:urlParams.get("machine"),
-    tags:urlParams.getAll("tags[]"),
+    tags:urlParams.getAll("tags"),
   },
 })
 
