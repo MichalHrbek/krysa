@@ -13,6 +13,7 @@ import asyncio
 
 try:
 	from websockets.asyncio.client import connect
+	from websockets.exceptions import ConnectionClosedError
 except:
 	subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "websockets"])
 	os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -132,6 +133,8 @@ async def main():
 													f.write(c["code"])
 									except:
 										traceback.print_exc()
+						except ConnectionClosedError:
+							break
 						except:
 							traceback.print_exc()
 					break
