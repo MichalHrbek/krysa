@@ -9,7 +9,7 @@ Build: `npm run build`
 ### Setup
 `pip install -r requirements.txt`
 ### Run
-Dev: `fastapi dev main.py`  
+Dev: `CORS=1 DOCS=1 fastapi dev main.py`  
 Prod: `fastapi run main.py`
 ### Auth
 Create a username and password with `python3 auth.py`

@@ -4,6 +4,6 @@ from fastapi import WebSocket
 
 @dataclass
 class LogListener:
-    socket: WebSocket
-    machine: Uid | None
-    tags: list[str]
+	socket: WebSocket
+	machine: Uid | None
+	tags: list[str]

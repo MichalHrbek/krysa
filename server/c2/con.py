@@ -1,7 +1,7 @@
 from fastapi import WebSocket
 from fastapi.encoders import jsonable_encoder
 import json, traceback
-from loglistener import LogListener
+from log_listener import LogListener
 from uid import Uid
 
 active_machines: dict[int, WebSocket] = {}

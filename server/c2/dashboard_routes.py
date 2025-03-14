@@ -9,7 +9,7 @@ import orders
 from auth import Authenticator
 import con
 from uid import Uid, gen_uid
-from loglistener import LogListener
+from log_listener import LogListener
 
 dash_router = APIRouter()
 dash_security = HTTPBasic()
