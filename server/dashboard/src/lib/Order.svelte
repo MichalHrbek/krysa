@@ -76,6 +76,8 @@
 
     <div class="horizontal-list">
       <b>Pending: </b>
+      <button class="nogap" onclick={() => {if(confirm("Clear pending?")) send_patch({pending: []});}}>🗑️</button>
+      
       {#each order.pending as machine_id}
         <span class='{selected_machines[machine_id] ? "selected " : ""}{machines[machine_id].connected ? "active" : "inactive"}'>{machine_id}</span>
       {/each}
@@ -83,6 +85,8 @@
 
     <div class="horizontal-list">
       <b>Done: </b>
+      <button class="nogap" onclick={() => {if(confirm("Clear done?")) send_patch({done: []});}}>🗑️</button>
+
       {#each order.done as machine_id}
         <span class='{selected_machines[machine_id] ? "selected " : ""}{machines[machine_id].connected ? "active" : "inactive"}'>{machine_id}</span>
       {/each}
@@ -122,6 +126,10 @@
     gap: 1em;
     overflow: auto;
     padding-bottom: 1em;
+  }
+
+  .nogap {
+    margin-left: -0.75em;
   }
 
   .selected {
