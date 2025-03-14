@@ -9,6 +9,7 @@ import orders
 from auth import Authenticator
 import con
 from uid import Uid, gen_uid
+from loglistener import LogListener
 
 dash_router = APIRouter()
 dash_security = HTTPBasic()
@@ -38,6 +39,27 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 		print("Dashboard disconnected")
 	finally:
 		con.active_dashboards.remove(websocket)
+
+@dash_router.websocket("/logs/ws")
+async def dashboard_websocket_endpoint(websocket: WebSocket, machine:Uid|None=None, tags:list[str]|None=None):
+	await websocket.accept()
+	data = await websocket.receive_json()
+	
+	authed = Authenticator.verify_user(data["username"], data["password"])
+	if not authed:
+		raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+	
+	l = LogListener(websocket, machine, tags)
+	con.listeners.append(l)
+	# con.active_dashboards.append(websocket)
+	try:
+		while True:
+			data = await websocket.receive_json()
+	except WebSocketDisconnect:
+		print("Dashboard disconnected")
+	finally:
+		con.listeners.remove(l)
+		# con.active_dashboards.remove(websocket)
 
 @dash_router.get("/api/machines")
 def get_machines(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)]) -> dict[str,machines.Machine]:

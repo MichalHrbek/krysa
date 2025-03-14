@@ -23,6 +23,9 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 		await machines.all[machine_id].on_connect(websocket.client.host)
 		while True:
 			data = await websocket.receive_json()
+			if data["event"] == "log":
+				await con.broadcast_log(machine_id, data["data"] if "data" in data else None, data["tags"] if "tags" in data else None)
+
 	except WebSocketDisconnect:
 		print(f"Machine {machine_id} left")
 	finally:
