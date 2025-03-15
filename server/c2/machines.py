@@ -5,12 +5,14 @@ from glob import glob
 from pydantic import BaseModel
 import orders
 import con
+from modules.rat_module import RatModule
 
 class Machine(BaseModel):
 	id: str
 	version: int
 	connections: dict[str, list[int]] = {}
 	connected: bool = False
+	modules: dict[str, RatModule] = {}
 
 	async def on_register(self, host):
 		self._register_connection(host)
@@ -78,4 +80,4 @@ class Machine(BaseModel):
 
 
 os.makedirs("data/machines", exist_ok=True)
-all = {i.id: i for i in Machine.load_all()}
+all: dict[str, Machine] = {i.id: i for i in Machine.load_all()}

@@ -3,4 +3,5 @@ export type MachineType = {
 	version: number;
 	connections: Record<string, number[]>;
 	connected: boolean;
+	modules: Record<string, any>;
 };

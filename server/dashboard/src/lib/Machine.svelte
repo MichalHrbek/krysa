@@ -46,6 +46,15 @@
       {/each}
     </ul>
   </details>
+  
+  <details open>
+    <summary><b>Modules</b></summary>
+    <ul>
+      {#each Object.entries(machine.modules) as [name, module] (name)}
+      <li><b>{name}:</b> {JSON.stringify(module)}</li>
+      {/each}
+    </ul>
+  </details>
 
   <details open>
     <summary><b>Pending orders</b></summary>

@@ -3,11 +3,12 @@
   import type { MachineType } from "./types/MachineType";
   import type { OrderType } from "./types/OrderType";
 
-  let { order=$bindable(), selected_machines, machines }:
+  let { order=$bindable(), selected_machines, machines, modules }:
   {
     order: OrderType,
     selected_machines: Record<string, boolean>,
     machines: Record<string, MachineType>
+    modules: Record<string, string>
   } = $props();
 
   let code = $state(JSON.stringify(order.data, null, "\t"));
@@ -51,6 +52,10 @@
       }
     }
     send_patch({pending: order.pending});
+  }
+
+  function opt_fmt(data: any) {
+    return JSON.stringify(data, null, "\t");
   }
 </script>
 
@@ -96,10 +101,14 @@
 
     <label for="templates">Choose a template:</label>
     <select name="templates" id="templates" bind:value={code} onchange={() => {saved = false;}}>
-      <option value={JSON.stringify({type:"python", code:"print('Hello world')"}, null, "\t")}>Python code</option>
-      <option value={JSON.stringify({type:"run", code:"gnome-calculator -m advanced"}, null, "\t")}>Run command</option>
-      <option value={JSON.stringify({type:"shell", host:"127.0.0.1", port:1234}, null, "\t")}>Reverse shell</option>
-      <option value={JSON.stringify({type:"update", code:"REPLACE THE RAT FILE WITH THIS (DANGEROUS!!)"}, null, "\t")}>Update RAT</option>
+      <option value={opt_fmt({type:"python", code:"print('Hello world')"})}>Python code</option>
+      <option value={opt_fmt({type:"run", code:"gnome-calculator -m advanced"})}>Run command</option>
+      <option value={opt_fmt({type:"shell", host:"127.0.0.1", port:1234})}>Reverse shell</option>
+      <option value={opt_fmt({type:"update", code:"REPLACE THE RAT FILE WITH THIS (DANGEROUS!!)"})}>Update RAT</option>
+      {#each Object.entries(modules) as [name, code] (name)}
+        <option value={opt_fmt({type:"install_module", name:name, code: code})}>Install {name}</option>
+        <option value={opt_fmt({type:"uninstall_module", name:name})}>Uninstall {name}</option>
+      {/each}
     </select>
     <button onclick={async () => {
       try {

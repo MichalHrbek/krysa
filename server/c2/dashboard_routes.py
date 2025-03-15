@@ -10,9 +10,11 @@ from auth import Authenticator
 import con
 from uid import Uid, gen_uid
 from log_listener import LogListener
+from modules.all import MODULES
 
 dash_router = APIRouter()
 dash_security = HTTPBasic()
+DashboardCredentials = Annotated[HTTPBasicCredentials, Depends(dash_security)]
 
 def auth_dashboard(credentials: HTTPBasicCredentials):
 	if not Authenticator.verify_user(credentials.username, credentials.password):
@@ -62,17 +64,17 @@ async def dashboard_websocket_endpoint(websocket: WebSocket, machine: Annotated[
 		# con.active_dashboards.remove(websocket)
 
 @dash_router.get("/api/machines")
-def get_machines(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)]) -> dict[str,machines.Machine]:
+def get_machines(credentials: DashboardCredentials) -> dict[str,machines.Machine]:
 	auth_dashboard(credentials)
 	return machines.all
 
 @dash_router.get("/api/orders")
-def get_orders(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)]) -> dict[str,orders.Order]:
+def get_orders(credentials: DashboardCredentials) -> dict[str,orders.Order]:
 	auth_dashboard(credentials)
 	return orders.all
 
 @dash_router.put("/api/orders/create", response_model=orders.Order)
-async def create_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)], order: orders.Order) -> orders.Order:
+async def create_order(credentials: DashboardCredentials, order: orders.Order) -> orders.Order:
 	auth_dashboard(credentials)
 	order.id = gen_uid()
 	orders.all[order.id] = order
@@ -82,7 +84,7 @@ async def create_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash
 	return order
 
 @dash_router.patch("/api/orders/{order_id}", response_model=orders.Order)
-async def update_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)], order_id: Uid, order: orders.Order) -> orders.Order:
+async def update_order(credentials: DashboardCredentials, order_id: Uid, order: orders.Order) -> orders.Order:
 	auth_dashboard(credentials)
 	orders.all[order_id] = orders.all[order_id].model_copy(update=order.model_dump(exclude_unset=True))
 	orders.all[order_id].save()
@@ -90,9 +92,14 @@ async def update_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash
 	return orders.all[order_id]
 
 @dash_router.delete("/api/orders/{order_id}")
-async def delete_order(credentials: Annotated[HTTPBasicCredentials, Depends(dash_security)], order_id: Uid):
+async def delete_order(credentials: DashboardCredentials, order_id: Uid):
 	auth_dashboard(credentials)
 	o = orders.all[order_id]
 	del orders.all[order_id]
 	o.delete()
 	await con.broadcast_order_update(o, event="delete")
+
+@dash_router.get("/api/modules")
+async def get_modules(credentials: DashboardCredentials) -> dict[str,str]:
+	auth_dashboard(credentials)
+	return {i:MODULES[i].get_client_code() for i in MODULES}

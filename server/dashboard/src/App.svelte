@@ -3,13 +3,14 @@
   import Order from './lib/Order.svelte';
   import type { OrderType } from './lib/types/OrderType';
   import type { MachineType } from './lib/types/MachineType';
-  import { server_config, login_prompt, logout, get_encoded_credentials, get_auth_header } from './lib/auth';
+  import { server_config, login_prompt, logout, get_auth_header } from './lib/auth';
   
 
   let machines: Record<string, MachineType> = $state({});
   let orders: Record<string, OrderType> = $state({});
   let selected: Record<string, boolean> = $state({});
   let versions: Record<string, boolean> = $state({});
+  let modules: Record<string, string> = $state({});
   let show_connected = $state(true);
   let show_disconnected = $state(true);
   
@@ -41,6 +42,7 @@
     machines = new_machines;
 
     orders = await authed_get(server_config.url + "api/orders");
+    modules = await authed_get(server_config.url + "api/modules");
 
 
     if(socket && socket.readyState === WebSocket.OPEN) await socket.close();
@@ -157,9 +159,9 @@
       </div>
 
     </header>
-    <main class="orders">
+    <main>
       {#each Object.keys(orders) as id (id)}
-      <Order bind:order={orders[id]} selected_machines={selected} {machines}/>
+      <Order bind:order={orders[id]} selected_machines={selected} {machines} {modules}/>
       {/each}
     </main>
   </article>
@@ -172,10 +174,6 @@
     flex-wrap: wrap;
     justify-content: flex-start;
     gap: 0.5em;
-  }
-
-  .orders {
-    
   }
 
   header {
