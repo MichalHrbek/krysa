@@ -59,9 +59,9 @@
   <details open>
     <summary><b>Pending orders</b></summary>
     <ul>
-      {#each Object.values(orders) as order}
+      {#each Object.values(orders) as order (order.id)}
       {#if order.pending.includes(machine.id)}
-      <li><pre>{JSON.stringify(order)}</pre></li>
+      <li><pre>{order.name} | {order.id}</pre></li>
       {/if}
       {/each}
     </ul>
@@ -70,9 +70,9 @@
   <details open>
     <summary><b>Completed orders</b></summary>
     <ul>
-      {#each Object.values(orders) as order}
+      {#each Object.values(orders) as order (order.id)}
       {#if order.done.includes(machine.id)}
-      <li><pre>{JSON.stringify(order)}</pre></li>
+      <li><pre>{order.name} | {order.id}</pre></li>
       {/if}
       {/each}
     </ul>
