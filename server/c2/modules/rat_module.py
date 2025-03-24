@@ -1,9 +1,11 @@
 from pydantic import BaseModel
 from typing import ClassVar
 from uid import Uid
+from fastapi import APIRouter
 
 class RatModule(BaseModel):
 	name: ClassVar[str] = "module_example"
+	router: ClassVar[APIRouter | None] = None
 	machine_id: Uid
 
 	async def handle_dashboard_message(self, data: dict):

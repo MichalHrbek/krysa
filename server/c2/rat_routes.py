@@ -40,3 +40,11 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 		print(f"Machine {machine_id} left")
 	finally:
 		await machines.all[machine_id].on_disconnect(websocket.client.host)
+
+for i in MODULES:
+	if MODULES[i].router:
+		rat_router.include_router(MODULES[i].router, prefix='/modules/'+i)
+
+@rat_router.post("/api/{version}/modules/msg/{module_name}/{machine_id}")
+async def message_module(version: int, module_name: str, machine_id: Uid):
+	machines.all[machine_id].modules[module_name].handle_rat_message()
