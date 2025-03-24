@@ -12,7 +12,7 @@ class Machine(BaseModel):
 	version: int
 	connections: dict[str, list[int]] = {}
 	connected: bool = False
-	modules: dict[str, RatModule] = {}
+	modules: dict[str, type[RatModule]] = {}
 
 	async def on_register(self, host):
 		self._register_connection(host)
