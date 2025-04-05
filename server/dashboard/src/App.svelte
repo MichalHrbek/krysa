@@ -10,7 +10,6 @@
   let orders: Record<string, OrderType> = $state({});
   let selected: Record<string, boolean> = $state({});
   let versions: Record<string, boolean> = $state({});
-  let modules: Record<string, string> = $state({});
   let show_connected = $state(true);
   let show_disconnected = $state(true);
   
@@ -42,7 +41,6 @@
     machines = new_machines;
 
     orders = await authed_get(server_config.url + "api/orders");
-    modules = await authed_get(server_config.url + "api/modules");
 
 
     if(socket && socket.readyState === WebSocket.OPEN) await socket.close();
@@ -161,7 +159,7 @@
     </header>
     <main>
       {#each Object.keys(orders) as id (id)}
-      <Order bind:order={orders[id]} selected_machines={selected} {machines} {modules}/>
+      <Order bind:order={orders[id]} selected_machines={selected} {machines}/>
       {/each}
     </main>
   </article>

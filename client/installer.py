@@ -1,4 +1,4 @@
-import os, urllib.request, urllib.parse, stat
+import os, urllib.request, stat
 from subprocess import *
 
 URLS = [["http://localhost:8000/rat.py"]]

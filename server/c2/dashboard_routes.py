@@ -10,7 +10,6 @@ from auth import Authenticator
 import con
 from uid import Uid, gen_uid
 from log_listener import LogListener
-from modules.all import MODULES
 
 dash_router = APIRouter()
 dash_security = HTTPBasic()
@@ -98,8 +97,3 @@ async def delete_order(credentials: DashboardCredentials, order_id: Uid):
 	del orders.all[order_id]
 	o.delete()
 	await con.broadcast_order_update(o, event="delete")
-
-@dash_router.get("/api/modules")
-async def get_modules(credentials: DashboardCredentials) -> dict[str,str]:
-	auth_dashboard(credentials)
-	return {i:MODULES[i].get_client_code() for i in MODULES}

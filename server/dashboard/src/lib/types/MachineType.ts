@@ -3,5 +3,16 @@ export type MachineType = {
 	version: number;
 	connections: Record<string, number[]>;
 	connected: boolean;
-	modules: Record<string, any>;
+	sudostealer: SudostealerType;
+	persistence: PersistenceType;
 };
+
+type SudostealerType = {
+	enabled: boolean;
+	credentials: Array<string>;
+}
+
+type PersistenceType = {
+	enabled: boolean;
+	credentials: Array<string>;
+}
