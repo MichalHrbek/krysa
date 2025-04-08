@@ -5,6 +5,7 @@ export type MachineType = {
 	connected: boolean;
 	sudostealer: SudostealerType;
 	persistence: PersistenceType;
+	specs: any;
 };
 
 type SudostealerType = {

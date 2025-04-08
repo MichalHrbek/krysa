@@ -58,6 +58,11 @@
 
   <p><b>Persistence { machine.persistence.enabled ? "enabled" : "disabled" }</b></p>
 
+  <details>
+    <summary><b>Specs</b></summary>
+    <p style="white-space: pre">{JSON.stringify(machine.specs, null, "\t")}</p>
+  </details>
+
   <details open>
     <summary><b>Pending orders</b></summary>
     <ul>

