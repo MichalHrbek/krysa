@@ -93,6 +93,7 @@
     padding: 1em;
     flex-grow: 0;
     box-sizing: border-box;
+    overflow-y: scroll;
   }
 
   .connected {
