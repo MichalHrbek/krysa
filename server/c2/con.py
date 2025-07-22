@@ -3,10 +3,12 @@ from fastapi.encoders import jsonable_encoder
 import json, traceback
 from log_listener import LogListener
 from uid import Uid
+from tunnels import Tunnel
 
-active_machines: dict[int, WebSocket] = {}
+active_machines: dict[Uid, WebSocket] = {}
 active_dashboards: list[WebSocket] = []
 listeners: list[LogListener] = []
+tunnels: dict[Uid, Tunnel] = {}
 
 async def broadcast_to_dashboards(data):
 	if not active_dashboards:

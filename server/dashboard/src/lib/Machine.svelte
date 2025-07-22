@@ -25,6 +25,9 @@
   <p><b>Version:</b> {machine.version}</p>
   <p><b>Last connection:</b> {new Date(Math.max(...Object.values(machine.connections).flat()) * 1000).toLocaleString()}</p>
   {#if expanded}
+  <a href={"shell.html?machine=" + machine.id} target="_blank">Open shell</a>
+  <br>
+  <br>
   <details open>
     <summary><b>Connections</b></summary>
     <ul>

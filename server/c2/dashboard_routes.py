@@ -6,6 +6,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 import machines
 import orders
+from tunnels import Tunnel
 from auth import Authenticator
 import con
 from uid import Uid, gen_uid
@@ -42,7 +43,7 @@ async def dashboard_websocket_endpoint(websocket: WebSocket):
 		con.active_dashboards.remove(websocket)
 
 @dash_router.websocket("/logs/ws")
-async def dashboard_websocket_endpoint(websocket: WebSocket, machine: Annotated[Uid | None, Query()] = None, tags:Annotated[list[str] | None, Query()] = None):
+async def logs_websocket_endpoint(websocket: WebSocket, machine: Annotated[Uid | None, Query()] = None, tags:Annotated[list[str] | None, Query()] = None):
 	await websocket.accept()
 	data = await websocket.receive_json()
 	
@@ -97,3 +98,31 @@ async def delete_order(credentials: DashboardCredentials, order_id: Uid):
 	del orders.all[order_id]
 	o.delete()
 	await con.broadcast_order_update(o, event="delete")
+
+@dash_router.websocket("/api/shell/{machine_id}")
+async def shell_websocket_endpoint(websocket: WebSocket, machine_id: Uid):
+	await websocket.accept()
+	data = await websocket.receive_json()
+	
+	authed = Authenticator.verify_user(data["username"], data["password"])
+	if not authed:
+		raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+	
+	if machine_id not in con.active_machines:
+		return
+	
+	tunnel = Tunnel(gen_uid(), None, websocket)
+	con.tunnels[tunnel.id] = tunnel
+
+	await con.active_machines[machine_id].send_json({"event":"shell", "tunnel_id":tunnel.id})
+
+	try:
+		while True:
+			data = await websocket.receive_text()
+			if tunnel.machine_socket:
+				await tunnel.machine_socket.send_text(data)
+	except WebSocketDisconnect:
+		pass
+	finally:
+		await tunnel.close()
+		del con.tunnels[tunnel.id]

