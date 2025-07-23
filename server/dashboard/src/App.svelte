@@ -34,13 +34,13 @@
   
   async function main()
   {
-    let new_machines: Record<string, MachineType> = await authed_get(server_config.url + "api/machines");
+    let new_machines: Record<string, MachineType> = await authed_get(server_config.url + "machines");
     for (const [id, machine] of Object.entries(new_machines)) {
       register_machine(machine);
     }
     machines = new_machines;
 
-    orders = await authed_get(server_config.url + "api/orders");
+    orders = await authed_get(server_config.url + "orders");
 
 
     if(socket && socket.readyState === WebSocket.OPEN) await socket.close();
@@ -138,7 +138,7 @@
         <label for="ordername"></label>
         <input type="text" name="ordername" id="ordername" placeholder="Order name">
         <button onclick={() => {
-          return fetch(server_config.url + "api/orders/create", {
+          return fetch(server_config.url + "orders/create", {
               method: "PUT",
               body: JSON.stringify({name:(document.getElementById("ordername") as HTMLInputElement).value}),
               headers: get_auth_header({

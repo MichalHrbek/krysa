@@ -19,7 +19,7 @@
     term.open(terminalDiv);
 
     // Connect to backend WebSocket (adjust URL as needed)
-    socket = new WebSocket(server_config.url.replace(/^https/, "ws") + "api/shell/" + machine);
+    socket = new WebSocket(server_config.url.replace(/^https/, "ws") + "shell/" + machine);
 
     socket.addEventListener("open", (event) => {
       socket.send(JSON.stringify({username:server_config.username,password:server_config.password}));

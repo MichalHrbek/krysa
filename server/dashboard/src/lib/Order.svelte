@@ -14,7 +14,7 @@
   let saved = $state(true);
 
   async function send_patch(body:any) {
-    await fetch(server_config.url + "api/orders/" + order.id, 
+    await fetch(server_config.url + "orders/" + order.id, 
       {
         method: "PATCH",
         headers: get_auth_header({
@@ -66,7 +66,7 @@
   <button title="Remove selected machines from pending" onclick={async() => await unsend_to_selected()}>Unsend to selected</button>
   <button onclick={async () => {
     if (confirm("Delete?")) {
-      await fetch(server_config.url + "api/orders/" + order.id, {
+      await fetch(server_config.url + "orders/" + order.id, {
         method: "DELETE",   
         headers: get_auth_header(),
       })

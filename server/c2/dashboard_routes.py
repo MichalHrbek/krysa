@@ -63,17 +63,17 @@ async def logs_websocket_endpoint(websocket: WebSocket, machine: Annotated[Uid |
 		con.listeners.remove(l)
 		# con.active_dashboards.remove(websocket)
 
-@dash_router.get("/api/machines")
+@dash_router.get("/machines")
 def get_machines(credentials: DashboardCredentials) -> dict[str,machines.Machine]:
 	auth_dashboard(credentials)
 	return machines.all
 
-@dash_router.get("/api/orders")
+@dash_router.get("/orders")
 def get_orders(credentials: DashboardCredentials) -> dict[str,orders.Order]:
 	auth_dashboard(credentials)
 	return orders.all
 
-@dash_router.put("/api/orders/create", response_model=orders.Order)
+@dash_router.put("/orders/create", response_model=orders.Order)
 async def create_order(credentials: DashboardCredentials, order: orders.Order) -> orders.Order:
 	auth_dashboard(credentials)
 	order.id = gen_uid()
@@ -83,7 +83,7 @@ async def create_order(credentials: DashboardCredentials, order: orders.Order) -
 	await orders.all[order.id].send_to_pending()
 	return order
 
-@dash_router.patch("/api/orders/{order_id}", response_model=orders.Order)
+@dash_router.patch("/orders/{order_id}", response_model=orders.Order)
 async def update_order(credentials: DashboardCredentials, order_id: Uid, order: orders.Order) -> orders.Order:
 	auth_dashboard(credentials)
 	orders.all[order_id] = orders.all[order_id].model_copy(update=order.model_dump(exclude_unset=True))
@@ -91,7 +91,7 @@ async def update_order(credentials: DashboardCredentials, order_id: Uid, order: 
 	await orders.all[order_id].send_to_pending()
 	return orders.all[order_id]
 
-@dash_router.delete("/api/orders/{order_id}")
+@dash_router.delete("/orders/{order_id}")
 async def delete_order(credentials: DashboardCredentials, order_id: Uid):
 	auth_dashboard(credentials)
 	o = orders.all[order_id]
@@ -99,7 +99,7 @@ async def delete_order(credentials: DashboardCredentials, order_id: Uid):
 	o.delete()
 	await con.broadcast_order_update(o, event="delete")
 
-@dash_router.websocket("/api/shell/{machine_id}")
+@dash_router.websocket("/shell/{machine_id}")
 async def shell_websocket_endpoint(websocket: WebSocket, machine_id: Uid):
 	await websocket.accept()
 	data = await websocket.receive_json()

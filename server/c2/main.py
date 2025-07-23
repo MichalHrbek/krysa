@@ -28,4 +28,4 @@ if os.environ.get("CORS"):
 # follow_symlink does the exact opposite of what it's supposed to and also crashes (0.45.3)???? https://github.com/encode/starlette/discussions/2850
 app.mount("/dashboard/ui", StaticFiles(directory="dashui", html=True, follow_symlink=False), name="Dashboard UI")
 app.include_router(dash_router, prefix="/dashboard")
-app.include_router(rat_router, prefix="/machines")
+app.include_router(rat_router, prefix="/machine")
