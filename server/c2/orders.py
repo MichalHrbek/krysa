@@ -3,6 +3,7 @@ from typing import Self
 from glob import glob
 import pickle, os, traceback
 import con
+from uid import Uid
 
 class Order(BaseModel):
 	id: str = None
@@ -46,4 +47,4 @@ class Order(BaseModel):
 		self.save()
 
 os.makedirs("data/orders", exist_ok=True)
-all = {i.id: i for i in Order.load_all()}
+all: dict[Uid, Order] = {i.id: i for i in Order.load_all()}
